@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sse-starlette
+pydantic
+qdrant-client
+langchain-huggingface
+fastembed
+docling
+transformers
+langchain-core
+langchain-classic
+langchain-text-splitters
+langchain-deepseek
+sentence-transformers
+
+langchain

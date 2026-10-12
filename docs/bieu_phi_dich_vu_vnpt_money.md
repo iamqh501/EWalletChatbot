@@ -1,0 +1,21 @@
+# Biểu phí dịch vụ VNPT Money
+
+## I. Bảng Chính Sách Phí Dịch Vụ Vnpt Money Dành Cho Khách Hàng Cá Nhân
+
+| Dịch vụ | Điều chỉnh | Hình thức | Hạn mức | Chính sách phí |
+|---|---|---|---|---|
+| Nạp tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Nạp tiền mặt tại điểm vào Mobile Money | *.Hạn mức tối thiểu/GD: 10.000<br>*.Hạn mức tối đa/GD: 200.000.000<br>*.Hạn mức tối đa/ngày: 200.000.000<br>*.Hạn mức tối đa/tháng: 1.000.000.000 | Miễn phí |
+| Nạp tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Nạp tiền từ Ví sang Mobile Money | *.Hạn mức tối thiểu/GD: 1.000<br>*.Hạn mức tối đa/GD: 100.000.000<br>*.Hạn mức tối đa/ngày: 100.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | Miễn phí |
+| Nạp tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Nạp tiền từ ngân hàng liên kết vào Ví/Mobile Money | Theo CS của Bank liên kết trực tiếp Hoặc theo chính sách của VNPT Money (Trường hợp Bank không quy định) | Miễn phí |
+| Nạp tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Nạp tiền từ ngân hàng không liên kết vào Ví | *.Hạn mức tối thiểu/GD: 10.000<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 400.000.000<br>*.Hạn mức tối đa/tháng: 1.000.000.000 | Miễn phí |
+| Rút tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Rút tiền mặt tại điểm | *.Hạn mức tối thiểu/GD: 10.000<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 50.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | 0.5%/GTGT, tối thiểu 2.000đ/GD |
+| Rút tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Rút tiền từ Mobile Money về Ví | *.Hạn mức tối thiểu/GD: 1.000<br>*.Hạn mức tối đa/GD: 100.000.000<br>*.Hạn mức tối đa/ngày: 100.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | Miễn phí |
+| Rút tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Rút tiền từ Mobile Money về Ngân hàng liên kết | Theo chính sách của ngân hàng liên kết trực tiếp Hoặc theo chính sách của VNPT Money (Trường hợp Bank không quy định) | Miễn phí |
+| Rút tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Rút tiền từ Ví về Ngân hàng liên kết | Theo CS của Bank liên kết trực tiếp Hoặc theo chính sách của VNPT Money (trường hợp Bank không quy định) | - Miễn phí dưới 100 triệu/tháng hoặc 10 Giao dịch/Tháng (tùy điều kiện nào đến trước)<br>- Thu phí 0.5%/GTGD ngoài hạn mức, tối thiểu 2000đ/GD |
+| Chuyển tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Chuyển tiền từ tài khoản Ví/Mobile Money này sang tài khoản Ví/Mobile Money khác mở tại VNPT | *.Hạn mức tối thiểu/GD: 1.000<br>*.Hạn mức tối đa/GD: 100.000.000<br>*.Hạn mức tối đa/ngày: 100.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | Miễn phí |
+| Chuyển tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Chuyển tiền từ Mobile Money sang TKNH không liên kết/Mobile Money ngoại mạng | *.Hạn mức tối thiểu/GD: 2.000<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 50.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | Miễn phí |
+| Chuyển tiền | Nâng hạn mức tối đa/ GD, ngày, tháng | Chuyển tiền từ tài khoản Ví sang TKNH không liên kết/ ví điện tử do Trung gian thanh toán khác phát hành | *.Hạn mức tối thiểu/GD: 1.000<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 50.000.000<br>*.Hạn mức tối đa/tháng: 100.000.000 | - Miễn phí dưới 50 triệu/tháng hoặc 100 Giao dịch/Tháng (tùy điều kiện nào đến trước)<br>- Thu phí 0.5%/GTGD ngoài hạn mức, tối thiểu 500đ/GD |
+| Thanh toán | Nâng hạn mức tối đa/ GD, tháng và SLGD tối đa/ tháng | Thanh toán từ tài khoản Ví | *.Hạn mức tối thiểu/GD: 0<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 50.000.000<br>*.Hạn mức tối đa/tháng: 400.000.000<br>*SLGD tối đa/tháng: 4.500 | Miễn phí |
+| Thanh toán | Nâng hạn mức tối đa/ GD, tháng và SLGD tối đa/ tháng | Thanh toán từ tài khoản Mobile Money | *.Hạn mức tối thiểu/GD: 0<br>*.Hạn mức tối đa/GD: 50.000.000<br>*.Hạn mức tối đa/ngày: 50.000.000<br>*.Hạn mức tối đa/tháng: 200.000.000<br>*.SLGD tối đa/tháng: 4.500 | Miễn phí |
+
+(*) Biểu phí áp dụng từ ngày 06/04/2026 đến khi có thông báo mới Lưu ý: Hạn mức và phí có thể thay đổi theo giai đoạn. Xem chi tiết biểu phí đối với từng ngân hàng liên kết tại đây Để biết thêm thông tin chi tiết vui lòng liên hệ Hotline: 18001091 (nhánh 3)

@@ -1,0 +1,242 @@
+[
+  {
+    "id": "pkg_001",
+    "metadata": {
+      "ten_goi": "BIG120_6T",
+      "dung_luong_gb": "2",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "2",
+      "gia_vnd": 600000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG120_6T gửi 888\nHuỷ gói: Soạn HUY BIG120_6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_002",
+    "metadata": {
+      "ten_goi": "YOLO100",
+      "dung_luong_gb": "2",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "2",
+      "gia_vnd": 100000,
+      "chu_ky_d": "30",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK YOLO100 gửi 888\nHuỷ gói: Soạn HUY YOLO100 gửi 888"
+    }
+  },
+  {
+    "id": "pkg_003",
+    "metadata": {
+      "ten_goi": "D169G",
+      "dung_luong_gb": "7",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "7",
+      "gia_vnd": 169000,
+      "chu_ky_d": "30",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK D169G gửi 888\nHuỷ gói: Soạn HUY D169G gửi 888"
+    }
+  },
+  {
+    "id": "pkg_004",
+    "metadata": {
+      "ten_goi": "D7TM",
+      "dung_luong_gb": "1.2",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1.2",
+      "gia_vnd": 7000,
+      "chu_ky_d": "1",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK D7TM gửi 888\nHuỷ gói: Soạn HUY D7TM gửi 888"
+    }
+  },
+  {
+    "id": "pkg_005",
+    "metadata": {
+      "ten_goi": "BIG90_12T",
+      "dung_luong_gb": "1",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1",
+      "gia_vnd": 900000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG90_12T gửi 888\nHuỷ gói: Soạn HUY BIG90_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_006",
+    "metadata": {
+      "ten_goi": "YOLO90_12T",
+      "dung_luong_gb": "1.5",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1.5",
+      "gia_vnd": 1080000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK YOLO90_12T gửi 888\nHuỷ gói: Soạn HUY YOLO90_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_007",
+    "metadata": {
+      "ten_goi": "BIG120_12T",
+      "dung_luong_gb": "2",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "2",
+      "gia_vnd": 1200000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG120_12T gửi 888\nHuỷ gói: Soạn HUY BIG120_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_008",
+    "metadata": {
+      "ten_goi": "BIG200_12T",
+      "dung_luong_gb": "4",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "4",
+      "gia_vnd": 2000000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG200_12T gửi 888\nHuỷ gói: Soạn HUY BIG200_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_009",
+    "metadata": {
+      "ten_goi": "DT90_12T",
+      "dung_luong_gb": "15",
+      "lam_moi_d": "30",
+      "trung_binh_ngay": "0.5",
+      "gia_vnd": 1080000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK DT90_12T gửi 888\nHuỷ gói: Soạn HUY DT90_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_010",
+    "metadata": {
+      "ten_goi": "DT120_12T",
+      "dung_luong_gb": "20",
+      "lam_moi_d": "30",
+      "trung_binh_ngay": "0.67",
+      "gia_vnd": 1440000,
+      "chu_ky_d": "360",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK DT120_12T gửi 888\nHuỷ gói: Soạn HUY DT120_12T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_011",
+    "metadata": {
+      "ten_goi": "BIG90_6T",
+      "dung_luong_gb": "1",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1",
+      "gia_vnd": 450000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG90_6T gửi 888\nHuỷ gói: Soạn HUY BIG90_6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_012",
+    "metadata": {
+      "ten_goi": "YOLO90_6T",
+      "dung_luong_gb": "1.5",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1.5",
+      "gia_vnd": 540000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK YOLO90_6T gửi 888\nHuỷ gói: Soạn HUY YOLO90_6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_013",
+    "metadata": {
+      "ten_goi": "BIG200_6T",
+      "dung_luong_gb": "4",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "4",
+      "gia_vnd": 1000000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG200_6T gửi 888\nHuỷ gói: Soạn HUY BIG200_6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_014",
+    "metadata": {
+      "ten_goi": "DT90 6T",
+      "dung_luong_gb": "15",
+      "lam_moi_d": "30",
+      "trung_binh_ngay": "0.5",
+      "gia_vnd": 540000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK DT90 6T gửi 888\nHuỷ gói: Soạn HUY DT90 6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_015",
+    "metadata": {
+      "ten_goi": "DT120_6T",
+      "dung_luong_gb": "20",
+      "lam_moi_d": "30",
+      "trung_binh_ngay": "0.67",
+      "gia_vnd": 720000,
+      "chu_ky_d": "180",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK DT120_6T gửi 888\nHuỷ gói: Soạn HUY DT120_6T gửi 888"
+    }
+  },
+  {
+    "id": "pkg_016",
+    "metadata": {
+      "ten_goi": "BIG200",
+      "dung_luong_gb": "4",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "4",
+      "gia_vnd": 200000,
+      "chu_ky_d": "30",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK BIG200 gửi 888\nHuỷ gói: Soạn HUY BIG200 gửi 888"
+    }
+  },
+  {
+    "id": "pkg_017",
+    "metadata": {
+      "ten_goi": "DT30",
+      "dung_luong_gb": "7",
+      "lam_moi_d": "7",
+      "trung_binh_ngay": "1",
+      "gia_vnd": 30000,
+      "chu_ky_d": "7",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK DT30 gửi 888\nHuỷ gói: Soạn HUY DT30 gửi 888"
+    }
+  },
+  {
+    "id": "pkg_018",
+    "metadata": {
+      "ten_goi": "D3",
+      "dung_luong_gb": "3",
+      "lam_moi_d": "3",
+      "trung_binh_ngay": "1",
+      "gia_vnd": 15000,
+      "chu_ky_d": "3",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK D3 gửi 888\nHuỷ gói: Soạn HUY D3 gửi 888"
+    }
+  },
+  {
+    "id": "pkg_019",
+    "metadata": {
+      "ten_goi": "D5",
+      "dung_luong_gb": "1",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "1",
+      "gia_vnd": 5000,
+      "chu_ky_d": "1",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK D5 gửi 888\nHuỷ gói: Soạn HUY D5 gửi 888"
+    }
+  },
+  {
+    "id": "pkg_020",
+    "metadata": {
+      "ten_goi": "D2",
+      "dung_luong_gb": "2",
+      "lam_moi_d": "1",
+      "trung_binh_ngay": "2",
+      "gia_vnd": 10000,
+      "chu_ky_d": "1",
+      "thong_tin_khac": "Gói cước tự động gia hạn vào cuối chu kỳ\nĐăng ký : Soạn DK D2 gửi 888\nHuỷ gói: Soạn HUY D2 gửi 888"
+    }
+  }
+]

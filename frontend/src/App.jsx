@@ -8,38 +8,74 @@ import { Send, Loader2, Bot, User, ChevronDown, ChevronUp } from 'lucide-react';
 import './App.css';
 
 function parseMessage(text) {
-  let thinkStart = text.indexOf('<think>');
-  let thinkEnd = text.indexOf('</think>');
-  let startTagLength = 7;
-  let endTagLength = 8;
-  
-  if (thinkStart === -1) {
-    thinkStart = text.indexOf('<thought>');
-    thinkEnd = text.indexOf('</thought>');
-    startTagLength = 9;
-    endTagLength = 10;
-  }
-  if (thinkStart === -1) {
-    thinkStart = text.indexOf('[Begin thinking]');
-    thinkEnd = text.indexOf('[End thinking]');
-    startTagLength = 16;
-    endTagLength = 14;
-  }
+  if (!text) return { thinking: null, content: '', isThinkingFinished: true };
 
-  if (thinkStart !== -1) {
+  let normalized = text
+    .split('<thought>').join('<think>')
+    .split('</thought>').join('</think>')
+    .split('[Begin thinking]').join('<think>')
+    .split('[End thinking]').join('</think>');
+
+  const thinkParts = [];
+  const contentParts = [];
+  let isThinkingFinished = true;
+
+  let remaining = normalized;
+  while (remaining.length > 0) {
+    const thinkStart = remaining.indexOf('<think>');
+    if (thinkStart === -1) {
+      contentParts.push(remaining);
+      break;
+    }
+
+    if (thinkStart > 0) {
+      contentParts.push(remaining.substring(0, thinkStart));
+    }
+
+    const afterStart = remaining.substring(thinkStart + 7);
+    const thinkEnd = afterStart.indexOf('</think>');
     if (thinkEnd !== -1) {
-      const before = text.substring(0, thinkStart);
-      const thinking = text.substring(thinkStart + startTagLength, thinkEnd);
-      const after = text.substring(thinkEnd + endTagLength);
-      return { thinking, content: before + after, isThinkingFinished: true };
+      thinkParts.push(afterStart.substring(0, thinkEnd));
+      remaining = afterStart.substring(thinkEnd + 8);
     } else {
-      const before = text.substring(0, thinkStart);
-      const thinking = text.substring(thinkStart + startTagLength);
-      return { thinking, content: before, isThinkingFinished: false };
+      thinkParts.push(afterStart);
+      isThinkingFinished = false;
+      remaining = '';
     }
   }
-  return { thinking: null, content: text, isThinkingFinished: true };
+
+  const thinking = thinkParts.length > 0 ? thinkParts.join('\n\n').trim() : null;
+  const content = contentParts.join('').trimStart();
+  return { thinking, content, isThinkingFinished };
 }
+
+const renderWithLineBreaks = (children) => {
+  if (typeof children === 'string') {
+    if (!children.includes('<br>') && !children.includes('<br/>') && !children.includes('<br />')) {
+      return children;
+    }
+    const parts = children.split(/<br\s*\/?>/gi);
+    return parts.map((part, idx) => (
+      <React.Fragment key={idx}>
+        {idx > 0 && <br />}
+        {part}
+      </React.Fragment>
+    ));
+  }
+  if (Array.isArray(children)) {
+    return children.map((child, idx) => (
+      <React.Fragment key={idx}>{renderWithLineBreaks(child)}</React.Fragment>
+    ));
+  }
+  return children;
+};
+
+const markdownComponents = {
+  td: ({ node, children, ...props }) => <td {...props}>{renderWithLineBreaks(children)}</td>,
+  th: ({ node, children, ...props }) => <th {...props}>{renderWithLineBreaks(children)}</th>,
+  p: ({ node, children, ...props }) => <p {...props}>{renderWithLineBreaks(children)}</p>,
+  li: ({ node, children, ...props }) => <li {...props}>{renderWithLineBreaks(children)}</li>,
+};
 
 const SystemLogBlock = ({ logs, isFinished, hasStartedThinking }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -103,6 +139,7 @@ const ThinkingBlock = ({ thinking, isFinished }) => {
           <ReactMarkdown 
             remarkPlugins={[remarkMath, remarkGfm]} 
             rehypePlugins={[rehypeKatex]}
+            components={markdownComponents}
           >
             {thinking}
           </ReactMarkdown>
@@ -119,6 +156,16 @@ const ThinkingBlock = ({ thinking, isFinished }) => {
   );
 };
 
+const getInitBubbleContent = (components, isReady, loadingText) => {
+  const lines = components.map((comp) => `${comp}: loaded`);
+  if (!isReady && loadingText) {
+    lines.push(loadingText);
+  } else if (isReady) {
+    lines.push('System ready.');
+  }
+  return lines.join('\n');
+};
+
 function App() {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
@@ -127,24 +174,87 @@ function App() {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [isServerReady, setIsServerReady] = useState(false);
+  // Trạng thái khởi tạo & nạp mô hình hệ thống
+  const [isSystemReady, setIsSystemReady] = useState(false);
+  const [loadedComponents, setLoadedComponents] = useState([]);
+  const [initLoadingText, setInitLoadingText] = useState('Connecting server...');
 
   useEffect(() => {
     let isMounted = true;
-    const checkServer = async () => {
+    let abortController = new AbortController();
+
+    const connectInitStream = async () => {
+      const port = import.meta.env.VITE_BACKEND_PORT || 8000;
       try {
-        const response = await fetch(`http://127.0.0.1:${import.meta.env.VITE_BACKEND_PORT || 8000}/api/health`);
-        if (response.ok && isMounted) {
-          setIsServerReady(true);
-        } else if (isMounted) {
-          setTimeout(checkServer, 3000);
+        const response = await fetch(`http://127.0.0.1:${port}/api/init-stream`, {
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
-      } catch (error) {
-        if (isMounted) setTimeout(checkServer, 3000);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          let currentEvent = 'message';
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.substring(7).trim();
+            } else if (line.startsWith('data: ')) {
+              const dataStr = line.substring(6);
+              try {
+                const data = JSON.parse(dataStr);
+                if (currentEvent === 'loading') {
+                  if (isMounted) setInitLoadingText(data.text);
+                } else if (currentEvent === 'loaded') {
+                  if (isMounted && data.component) {
+                    setLoadedComponents((prev) =>
+                      prev.includes(data.component) ? prev : [...prev, data.component]
+                    );
+                  }
+                } else if (currentEvent === 'complete') {
+                  if (isMounted) {
+                    setIsSystemReady(true);
+                    setInitLoadingText('');
+                  }
+                } else if (currentEvent === 'error') {
+                  if (isMounted) {
+                    setInitLoadingText(`Error: ${data.text}`);
+                  }
+                }
+              } catch (e) {
+                console.error("Lỗi parse SSE init data:", e);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (!isMounted || abortController.signal.aborted) return;
+        setInitLoadingText('Connecting server...');
+        setTimeout(() => {
+          if (isMounted && !abortController.signal.aborted) {
+            connectInitStream();
+          }
+        }, 2000);
       }
     };
-    checkServer();
-    return () => { isMounted = false; };
+
+    connectInitStream();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   const handleScroll = () => {
@@ -158,11 +268,11 @@ function App() {
     if (autoScroll) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
-  }, [messages, systemStatus]);
+  }, [messages, systemStatus, loadedComponents, initLoadingText]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!query.trim() || isLoading || !isServerReady) return;
+    if (!query.trim() || isLoading || !isSystemReady) return;
 
     const userMessage = { role: 'user', content: query };
     setMessages((prev) => [...prev, userMessage]);
@@ -272,12 +382,20 @@ function App() {
       </header>
 
       <main className="chat-container" ref={chatContainerRef} onScroll={handleScroll}>
+        {/* Bong bóng chat khởi tạo hệ thống riêng biệt, luôn hiển thị đầu tiên */}
+        <div className="message-row bot-row system-init-row">
+          <div className="avatar bot-avatar"><Bot size={20} /></div>
+          <div className="message-bubble bot-bubble system-init-bubble">
+            {getInitBubbleContent(loadedComponents, isSystemReady, initLoadingText)}
+          </div>
+        </div>
+
         {messages.map((msg, index) => {
           if (msg.role === 'user') {
             return (
               <div key={index} className="message-row user-row">
                 <div className="message-bubble user-bubble">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
                 </div>
                 <div className="avatar user-avatar"><User size={20} /></div>
               </div>
@@ -295,6 +413,7 @@ function App() {
                     <ReactMarkdown 
                       remarkPlugins={[remarkMath, remarkGfm]} 
                       rehypePlugins={[rehypeKatex]}
+                      components={markdownComponents}
                     >
                       {parsed.content}
                     </ReactMarkdown>
@@ -315,10 +434,10 @@ function App() {
       </main>
 
       <footer className="input-area">
-        {!isServerReady && (
-          <div style={{ padding: '10px 16px', fontSize: '14px', color: '#854d0e', backgroundColor: '#fef08a', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Loader2 className="spinner" size={16} />
-            <span>Hệ thống đang khởi động và nạp mô hình AI. Vui lòng chờ trong giây lát...</span>
+        {!isSystemReady && (
+          <div className="init-loading-banner">
+            <Loader2 className="spinner" size={14} />
+            <span>{initLoadingText || 'Loading...'}</span>
           </div>
         )}
         <form onSubmit={handleSubmit} className="input-form">
@@ -326,11 +445,15 @@ function App() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={isServerReady ? "Hỏi về tài liệu của bạn..." : "Đang chờ hệ thống sẵn sàng..."}
-            disabled={isLoading || !isServerReady}
+            placeholder="Hỏi về tài liệu của bạn..."
+            disabled={isLoading}
           />
-          <button type="submit" disabled={isLoading || !query.trim() || !isServerReady}>
-            <Send size={20} />
+          <button 
+            type="submit" 
+            disabled={isLoading || !query.trim() || !isSystemReady}
+            title={!isSystemReady ? "System loading..." : "Gửi"}
+          >
+            {isLoading ? <Loader2 className="spinner" size={20} /> : <Send size={20} />}
           </button>
         </form>
       </footer>

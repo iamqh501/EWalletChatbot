@@ -51,5 +51,5 @@ taskkill /PID %BACKEND_PID% /T /F >nul 2>&1
 taskkill /PID %FRONTEND_PID% /T /F >nul 2>&1
 del backend.pid frontend.pid >nul 2>&1
 
-echo Hoan tat! Tat ca tien trinh da duoc tat triet de.
+echo Hoan tat! Tat ca tien trinh da duoc tat.
 timeout /t 3 >nul

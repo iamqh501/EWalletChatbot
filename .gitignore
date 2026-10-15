@@ -1,4 +1,6 @@
+# ==============================================================================
 # Python
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -14,11 +16,18 @@ lib/
 lib64/
 parts/
 sdist/
-var/
 wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Testing & Code Quality Cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
 
 # Virtual Environments
 .venv/
@@ -28,34 +37,51 @@ ENV/
 env.bak/
 venv.bak/
 
-# Node.js & Frontend
+# ==============================================================================
+# Node.js & Frontend (React / Vite)
+# ==============================================================================
 node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
+frontend/.vite/
+.eslintcache
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Environment & Configs
+# ==============================================================================
+# Environment & Secrets Configs
+# ==============================================================================
 .env
 .env.local
 .env.*.local
 frontend/.env
 frontend/.env.local
+frontend/.env.*.local
 local_paths.json
+!local_paths.example.json
 
-# Local Vector DB & Stores
+# ==============================================================================
+# Local Vector DB, Stores & Index State
+# ==============================================================================
 local_qdrant/
 parent_store/
+docs/file_state.json
+file_state.json
+chunks_output/
 
+# ==============================================================================
 # Process PID files
+# ==============================================================================
 *.pid
 backend.pid
 frontend.pid
 
+# ==============================================================================
 # IDE & Editor files
+# ==============================================================================
 .idea/
 .vscode/
 *.swp
@@ -66,14 +92,36 @@ frontend.pid
 *.njsproj
 *.sln
 
-# Logs & Temporary files
+# ==============================================================================
+# AI Assistants / Agent Workspace
+# ==============================================================================
+.agents/
+skills-lock.json
+.gemini/
+.claude/
+.cursor/
+
+# ==============================================================================
+# Logs & Temporary Test Files
+# ==============================================================================
 *.log
 logs/
 .cache/
 scratch/
+test_out.txt
+test_out*.txt
+output.txt
+*_output.txt
+table_output.txt
+*.tmp
+*.bak
 
+# ==============================================================================
 # Operating System files
+# ==============================================================================
 .DS_Store
 Thumbs.db
 Desktop.ini
 ehthumbs.db
+$RECYCLE.BIN/
+*.lnk

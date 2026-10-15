@@ -11,6 +11,4 @@ langchain-core
 langchain-classic
 langchain-text-splitters
 langchain-deepseek
-sentence-transformers
-
 langchain

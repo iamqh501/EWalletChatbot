@@ -83,7 +83,7 @@ class HistoryScorer:
         """
         m = len(recent_turns)
         if m == 0:
-            debug_text = "**[Đánh giá tương đồng lịch sử (Jev)]**\n- Số lượng message đánh giá: 0 (Hội thoại mới bắt đầu)\n"
+            debug_text = "History context: 0 messages\n"
             return {
                 "scored_messages": [],
                 "valid_context": [],
@@ -171,29 +171,21 @@ class HistoryScorer:
 
         context_text = "\n\n".join(context_blocks)
 
-        # 4. Soạn thông tin debug ngắn gọn ra frontend phần thinking
-        debug_lines = [
-            f"**[Đánh giá tương đồng lịch sử (Jev)]**",
-            f"- Số lượng message đánh giá: {m}"
-        ]
-        # In các message từ gần nhất đến xa nhất (hoặc theo thứ tự diff)
-        for idx, item in enumerate(scored_messages, 1):
-            diff = item["diff"]
-            turn_id = item["turn_id"]
-            d_val = item["d_i"]
-            u_val = item["u_i"]
-            r_list = item["r_ij_list"]
-            if r_list:
-                r_repr = "[" + ", ".join([f"Msg {oid} ({d}msg trước): {r}" for oid, d, r in r_list]) + "]"
-            else:
-                r_repr = "Không có"
-            
-            status = "✓ ĐẠT (>= 0.7)" if item["passed"] else "✗ (< 0.7)"
-            debug_lines.append(
-                f"- Message {turn_id} ({diff} message trước): d_i={d_val:.4f} | r_ij={r_repr} | u_i={u_val:.4f} -> {status}"
-            )
+        # 4. Soạn thông tin debug ngắn gọn ra frontend phần thinking theo format yêu cầu:
+        # Chỉ in các message vượt ngưỡng threshold, sắp xếp theo thứ tự lịch sử từ lâu nhất trước tới gần đây.
+        if not valid_messages_sorted:
+            debug_text = "History context: 0 messages\n"
+        else:
+            debug_lines = [
+                f"History context: {len(valid_messages_sorted)} messages  "
+            ]
+            for item in valid_messages_sorted:
+                diff = item["diff"]
+                turn_id = item["turn_id"]
+                u_val = item["u_i"]
+                debug_lines.append(f"Msg {turn_id} (-{diff}): {u_val:.2f}  ")
 
-        debug_text = "\n".join(debug_lines) + "\n"
+            debug_text = "\n".join(debug_lines) + "\n"
 
         return {
             "scored_messages": scored_messages,

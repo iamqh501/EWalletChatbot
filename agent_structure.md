@@ -77,7 +77,7 @@
 
 ### 1. Framework
 - **Frontend**: React (Vite)
-- **Backend**: FastAPI (Uvicorn)
+- **Backend**: FastAPI (Uvicorn), kiến trúc phân tầng chuẩn hóa (`api/`, `core/`, `prompts/`, `tools/`, `services/`, `utils/`)
 
 ### 2. LLM & Hosting
 - **Mô hình**: `openai/gpt-oss-20b:fastest` (hoặc các model trên Hugging Face Router như `Qwen/Qwen3.5-9B`, cấu hình qua `local_paths.json`)

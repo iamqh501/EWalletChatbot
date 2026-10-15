@@ -269,3 +269,49 @@ un_app.bat doc port tu ports.json va tu dong kill process cu.
   - Bổ sung bỏ qua các file test/output tạm thời (`test_out*.txt`, `*output.txt`, `*.tmp`, `*.bak`).
   - Bổ sung cache kiểm thử code quality (`.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`, `.coverage`, `htmlcov/`) và frontend Vite (`frontend/.vite/`, `.eslintcache`).
   - Kiểm tra trạng thái Git: Xác nhận repository sạch sẽ, chỉ còn lại các file source code và docs chuẩn cần track.
+
+## Phase 32: Tối ưu hóa định dạng hiển thị Relevance trên Frontend
+- [x] Rút gọn định dạng hiển thị thông tin tương đồng lịch sử trong khối thinking:
+  - Thay đổi format cũ sang format ngắn gọn theo yêu cầu:
+    `History context: {m} messages`
+    `Msg {id} (-{diff}): {score:.2f}`
+  - Sắp xếp thứ tự hiển thị ưu tiên từ tin nhắn gần nhất (`-1`, `-2`, ...).
+  - Bổ sung 2 trailing spaces để Markdown ngắt dòng `<br/>` chính xác trên frontend UI.
+  - Chạy test kiểm thử logic format thành công 100%.
+
+## Phase 33: Lọc Message Vượt Ngưỡng, Xóa Thẻ Think Thừa & Hiển Thị Tên Model Khởi Động
+- [x] Lọc và sắp xếp relevance:
+  - Chỉ in các message vượt ngưỡng threshold ($u_i \ge 0.7$).
+  - Sắp xếp theo thứ tự lịch sử từ lâu nhất trước tới gần đây (`valid_messages_sorted` theo turn id tăng dần).
+  - Cập nhật số lượng message tương ứng với số lượng đạt ngưỡng (`History context: x messages`).
+- [x] Loại bỏ triệt để thẻ `<think>` in thừa ra frontend:
+  - Giữ nguyên `in_thinking = True` ở Call 1 để không re-emit `<think>\n` khi model bắt đầu stream reasoning.
+  - Lọc bỏ mọi thẻ `<think>` / `</think>` bên trong reasoning ở cả Call 1 và Call 2.
+  - Bổ sung khử thẻ `<think>` bên trong `parseMessage` tại `frontend/src/App.jsx`.
+- [x] Hiển thị chi tiết tên model khi khởi động hệ thống:
+  - Cập nhật backend truyền tên model động: `Dense Embedding: {dense_model}`, `Sparse Embedding: {sparse_model}`, `Reranker: {reranker_model}`, `LLM: {llm_model}`, `Knowledge Base: Qdrant`.
+  - Cập nhật frontend `getInitBubbleContent` in chuẩn format: `<Component>: <Model Name>.  Loaded.`.
+
+## Phase 34: Refactoring Architecture & Tái Cấu Trúc Mã Nguồn Chuẩn Hóa
+- [x] Tách tầng Core & State (`backend/core/state.py`):
+  - Đóng gói `AppState` (quản lý kết nối DB, client, models, lifecyle listeners).
+  - Xây dựng `SessionManager` quản lý session, lịch sử hội thoại và ma trận tương đồng Harmonic Bridge $u_i \rightarrow r_{ij}$.
+  - Chuyển `lifespan` và `load_models_background` về `state.py`.
+- [x] Tách tầng Prompts (`backend/prompts/`):
+  - Module hóa `routing.py` (`TOOL_ROUTING_SYSTEM_PROMPT`), `final_response.py` (`FINAL_RESPONSE_SYSTEM_PROMPT`), `intent_resolver.py` (`get_intent_resolver_prompt`).
+- [x] Tách tầng Tools (`backend/tools/`):
+  - `schemas.py`: Chứa các Pydantic Args schemas (`SearchGeneralKnowledgeArgs`, `SearchTelecomPackagesArgs`, `ResolveIntentArgs`).
+  - `general_knowledge.py`: Core search Qdrant + Parent Store, formatting summary thinking.
+  - `telecom_packages.py`: Data loader JSON + core search, filter và ranking gói cước.
+  - `intent_resolver.py`: Core execute 3-step intent resolution.
+- [x] Xây dựng Agent Orchestrator Service (`backend/services/agent_orchestrator.py`):
+  - Đóng gói toàn bộ luồng điều phối 2 Call, stream reasoning, tool execution, context formatting, metrics tracking và session persistence.
+- [x] Tách tầng API (`backend/api/`):
+  - `schemas.py`: Pydantic models cho requests/responses (`QueryRequest`, `HealthResponse`).
+  - `routes.py`: Định nghĩa các endpoints `/api/query`, `/api/init-stream`, `/api/health`.
+- [x] Tinh gọn `backend/main.py`:
+  - Giảm từ 746 dòng xuống 43 dòng, đóng vai trò là Composition Root khởi tạo FastAPI app, middleware và gắn router.
+- [x] Kiểm thử toàn diện E2E:
+  - Chạy smoke test và E2E streaming test cho toàn bộ kịch bản (greeting, telecom package, follow-up query, tool calling, model load status), đạt 100% pass.
+- [x] Đồng bộ tài liệu: Cập nhật `agent_structure.md`, `workflow.md`, `progress.md`.
+

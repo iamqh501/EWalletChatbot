@@ -236,6 +236,29 @@
 97. **Cập nhật file .gitignore**: Bổ sung bỏ qua AI Agent metadata, thư mục chunks_output, cache trạng thái index docs/file_state.json, các file log/output text tạm thời và cache code quality.
 98. **Xác nhận trạng thái Git & Đồng bộ tiến độ**: Kiểm tra `git status`, đảm bảo repo sạch sẽ và cập nhật `progress.md`.
 
+## Phase 32: Tối ưu hóa định dạng hiển thị Relevance trên Frontend
+99. **Cập nhật format debug_text trong HistoryScorer**: Đổi sang format `History context: {m} messages` và `Msg {id} (-{diff}): {score:.2f}`, ưu tiên tin nhắn gần nhất và ngắt dòng chuẩn Markdown.
+100. **Kiểm thử & Đồng bộ tiến độ**: Xác nhận kết quả test format và cập nhật `progress.md`.
+
+## Phase 33: Lọc Message Vượt Ngưỡng, Xóa Thẻ Think Thừa & Hiển Thị Tên Model Khởi Động
+101. **Lọc và sắp xếp relevance**: Chỉ hiển thị các tin nhắn đạt ngưỡng $u_i \ge 0.7$, sắp xếp theo thứ tự thời gian từ lâu nhất đến gần nhất.
+102. **Khử thẻ `<think>` thừa**: Đồng bộ trạng thái `in_thinking = True` và lọc thẻ `<think>` ở cả backend và frontend.
+103. **Hiển thị tên model khi khởi động**: Gửi tên model chi tiết từ backend và format dạng `<Component>: <Model Name>.  Loaded.` trên frontend.
+104. **Kiểm thử & Đồng bộ tài liệu**: Chạy test xác nhận và cập nhật `progress.md`.
+
+## Phase 34: Refactoring Architecture & Tái Cấu Trúc Mã Nguồn Chuẩn Hóa
+105. **Tách tầng Core & State (`backend/core/state.py`)**: Đóng gói `AppState`, `SessionManager` và logic `lifespan` / `load_models_background`.
+106. **Tách tầng Prompts (`backend/prompts/`)**: Module hóa `routing.py`, `final_response.py`, và `intent_resolver.py`.
+107. **Tách tầng Tools (`backend/tools/`)**: Module hóa `schemas.py`, `general_knowledge.py`, `telecom_packages.py`, `intent_resolver.py`.
+108. **Xây dựng Agent Orchestrator Service (`backend/services/agent_orchestrator.py`)**: Điều phối 2 Call, tool state binding, SSE event generator và metrics tracker.
+109. **Tách tầng API (`backend/api/`)**: Tạo `routes.py` và `schemas.py` chứa các endpoints `/api/query`, `/api/init-stream`, `/api/health`.
+110. **Tinh gọn `backend/main.py`**: Biến `main.py` thành Composition Root gọn gàng (~60 dòng).
+111. **Kiểm thử toàn diện E2E**: Chạy smoke test, API streaming test, đảm bảo hoạt động chính xác 100%.
+112. **Cập nhật tài liệu**: Đồng bộ `agent_structure.md`, `progress.md` và `workflow.md`.
+
+
+
+
 
 
 

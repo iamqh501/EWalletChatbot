@@ -44,7 +44,9 @@ function parseMessage(text) {
     }
   }
 
-  const thinking = thinkParts.length > 0 ? thinkParts.join('\n\n').trim() : null;
+  const thinking = thinkParts.length > 0 
+    ? thinkParts.join('\n\n').split('<think>').join('').split('</think>').join('').trim() 
+    : null;
   const content = contentParts.join('').trimStart();
   return { thinking, content, isThinkingFinished };
 }
@@ -157,7 +159,7 @@ const ThinkingBlock = ({ thinking, isFinished }) => {
 };
 
 const getInitBubbleContent = (components, isReady, loadingText) => {
-  const lines = components.map((comp) => `${comp}: loaded`);
+  const lines = components.map((comp) => `${comp}.  Loaded.`);
   if (!isReady && loadingText) {
     lines.push(loadingText);
   } else if (isReady) {

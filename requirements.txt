@@ -12,3 +12,4 @@ langchain-classic
 langchain-text-splitters
 langchain-deepseek
 langchain
+python-dotenv

@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import json
 import asyncio
@@ -14,7 +13,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, AIMessage
 
 from backend.core.config import QDRANT_PATH, STORE_PATH
-from backend.services.retrieval import get_dense_embedding_model, get_reranker, PATHS_CONFIG
+from backend.services.retrieval import get_dense_embedding_model, get_reranker
 from backend.services.llm import get_llm_model
 
 
@@ -137,7 +136,7 @@ session_manager = SessionManager()
 async def load_models_background():
     print("Loading AI Models into memory...")
     try:
-        dense_model_name = os.getenv("HF_EMBEDDING_MODEL") or PATHS_CONFIG.get("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
+        dense_model_name = os.getenv("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
         notify_init_step(f"Loading Dense Embedding ({dense_model_name})...")
         app_state.dense_model = await asyncio.to_thread(get_dense_embedding_model)
         notify_component_loaded(f"Dense Embedding: {dense_model_name}")
@@ -151,11 +150,11 @@ async def load_models_background():
         notify_component_loaded(f"Sparse Embedding: {sparse_model_name}")
 
         reranker = get_reranker()
-        reranker_model_name = getattr(reranker, "model", None) or os.getenv("RERANKER_MODEL") or PATHS_CONFIG.get("RERANKER_MODEL", "jev-latest")
+        reranker_model_name = getattr(reranker, "model", None) or os.getenv("RERANKER_MODEL", "jev-latest")
         notify_init_step(f"Loading Reranker ({reranker_model_name})...")
         notify_component_loaded(f"Reranker: {reranker_model_name}")
 
-        llm_model_name = os.getenv("HF_MODEL_NAME") or PATHS_CONFIG.get("HF_MODEL_NAME", "openai/gpt-oss-20b:fastest")
+        llm_model_name = os.getenv("HF_MODEL_NAME", "inclusionAI/Ling-3.0-flash:fastest")
         notify_init_step(f"Connecting LLM ({llm_model_name})...")
         if not hasattr(app_state, "llm") or app_state.llm is None:
             app_state.llm = await asyncio.to_thread(get_llm_model)

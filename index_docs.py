@@ -15,6 +15,8 @@ if sys.stdout.encoding.lower() != 'utf-8':
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
+import backend.core.env
+
 from qdrant_client import QdrantClient, models
 from langchain_core.documents import Document
 from langchain_classic.storage import LocalFileStore

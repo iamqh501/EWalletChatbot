@@ -1,21 +1,12 @@
 import json
 import asyncio
-from typing import AsyncGenerator, Dict, Any, List, Optional
-from langchain_core.tools import tool
+from typing import AsyncGenerator, Dict, Any
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessageChunk, ToolMessage
 
 from backend.core.state import app_state, session_manager
 from backend.prompts import TOOL_ROUTING_SYSTEM_PROMPT, FINAL_RESPONSE_SYSTEM_PROMPT
-from backend.tools import (
-    SearchGeneralKnowledgeArgs,
-    SearchTelecomPackagesArgs,
-    ResolveIntentArgs,
-    execute_search_general_knowledge,
-    format_chunks_summary_for_thinking,
-    execute_search_telecom_packages,
-    execute_resolve_intent
-)
+from backend.tools import AgentToolContext, create_agent_tools
 from backend.services.history_scorer import get_history_scorer
 from backend.utils.metrics import StreamMetricsTracker
 
@@ -67,84 +58,17 @@ class AgentOrchestrator:
                 user_prompt_content = query
 
             # 3. Khởi tạo Context và Tool Calling cho lượt truy vấn
-            tool_logs: List[str] = []
-            retrieved_context: List[Dict[str, Any]] = []
-            tool_call_limits = {
-                "search_general_knowledge": 1,
-                "search_telecom_packages": 1,
-                "resolve_intent": 1
-            }
-
-            @tool(args_schema=SearchGeneralKnowledgeArgs, return_direct=True)
-            def search_general_knowledge(query: str) -> List[Dict[str, Any]]:
-                """Tìm kiếm thông tin hướng dẫn sử dụng, chính sách chung về ví điện tử."""
-                if tool_call_limits["search_general_knowledge"] <= 0:
-                    return [{"error": "[HỆ THỐNG] Bạn đã hết lượt gọi tool này. Hãy sử dụng thông tin hiện có để trả lời."}]
-                tool_call_limits["search_general_knowledge"] = 0
-
-                res = execute_search_general_knowledge(
-                    query=query,
-                    dense_model=app_state.dense_model,
-                    sparse_model=app_state.sparse_model,
-                    client=app_state.qdrant_client,
-                    store=app_state.store
-                )
-                retrieved_context.append({"tool": "search_general_knowledge", "data": res})
-                tool_summary = format_chunks_summary_for_thinking(res)
-                tool_logs.append(f"**[GỌI TOOL]**\n\n`search_general_knowledge(query=\"{query}\")`\n\n```\n{tool_summary}\n```\n")
-                return res
-
-            @tool(args_schema=SearchTelecomPackagesArgs, return_direct=True)
-            def search_telecom_packages(
-                package_name: Optional[str] = None,
-                price_min: Optional[float] = None,
-                price_max: Optional[float] = None,
-                cycle_days_min: Optional[int] = None,
-                cycle_days_max: Optional[int] = None,
-                data_gb_per_day_min: Optional[float] = None,
-                data_gb_per_day_max: Optional[float] = None,
-            ) -> str:
-                """Tìm kiếm và đề xuất các gói cước điện thoại dựa trên các tiêu chí."""
-                if tool_call_limits["search_telecom_packages"] <= 0:
-                    return "[HỆ THỐNG] Bạn đã hết lượt gọi tool này. Hãy sử dụng thông tin hiện có để trả lời."
-                tool_call_limits["search_telecom_packages"] = 0
-
-                args_dict = {
-                    "package_name": package_name,
-                    "price_min": price_min,
-                    "price_max": price_max,
-                    "cycle_days_min": cycle_days_min,
-                    "cycle_days_max": cycle_days_max,
-                    "data_gb_per_day_min": data_gb_per_day_min,
-                    "data_gb_per_day_max": data_gb_per_day_max
-                }
-                res = execute_search_telecom_packages(**args_dict)
-                retrieved_context.append({"tool": "search_telecom_packages", "data": res})
-
-                args_str = ", ".join([f"{k}={repr(v)}" for k, v in args_dict.items() if v is not None])
-                short_res = res[:2500] + "..." if len(res) > 2500 else res
-                tool_logs.append(f"**[GỌI TOOL]**\n\n`search_telecom_packages({args_str})`\n\n```\n{short_res}\n```\n")
-                return res
-
-            @tool(args_schema=ResolveIntentArgs)
-            def resolve_intent(query: str, uncertainty_reason: str) -> str:
-                """Sử dụng tool này khi bạn KHÔNG CHẮC CHẮN người dùng muốn gì."""
-                if tool_call_limits["resolve_intent"] <= 0:
-                    return "[HỆ THỐNG] Bạn đã hết lượt gọi tool resolve_intent."
-                tool_call_limits["resolve_intent"] = 0
-
-                content = execute_resolve_intent(
-                    query=query,
-                    uncertainty_reason=uncertainty_reason,
-                    history_context_text=history_context_text,
-                    llm=llm
-                )
-                retrieved_context.append({"tool": "resolve_intent", "data": content})
-                tool_logs.append(f"**[GỌI TOOL: resolve_intent]**\n- Lý do không chắc chắn: {uncertainty_reason}\n\n```\n{content}\n```\n")
-                return content
+            tool_context = AgentToolContext(
+                app_state=app_state,
+                llm=llm,
+                history_context_text=history_context_text
+            )
+            tools = create_agent_tools(tool_context)
+            retrieved_context = tool_context.retrieved_context
+            tool_logs = tool_context.tool_logs
 
             # Khởi tạo Agent chuẩn hóa với create_agent theo Rule 7
-            agent = create_agent(llm, [search_general_knowledge, search_telecom_packages, resolve_intent])
+            agent = create_agent(llm, tools)
 
             metrics = StreamMetricsTracker()
             metrics.start()

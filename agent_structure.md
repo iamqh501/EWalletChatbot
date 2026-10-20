@@ -80,7 +80,7 @@
 - **Backend**: FastAPI (Uvicorn), kiến trúc phân tầng chuẩn hóa (`api/`, `core/`, `prompts/`, `tools/`, `services/`, `utils/`)
 
 ### 2. LLM & Hosting
-- **Mô hình**: `openai/gpt-oss-20b:fastest` (hoặc các model trên Hugging Face Router như `Qwen/Qwen3.5-9B`, cấu hình qua `local_paths.json`)
+- **Mô hình**: Cấu hình linh hoạt qua biến môi trường hoặc file `.env` (`HF_MODEL_NAME=inclusionAI/Ling-3.0-flash:fastest`)
 - **Hosting**: Hugging Face Router API (`https://router.huggingface.co/v1`)
 - **Tích hợp**: Giao tiếp qua thư viện LangChain `ChatDeepSeek` (hỗ trợ native streaming reasoning, tool calling, `stream_usage=True` đo tốc độ sinh token, `max_tokens=None` - không giới hạn token đầu ra)
 

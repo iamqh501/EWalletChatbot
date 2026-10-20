@@ -6,11 +6,16 @@ echo ==========================================
 echo       EWALLET CHATBOT - STARTUP
 echo ==========================================
 
-REM Read ports from ports.json
-for /f "tokens=2 delims=:," %%a in ('findstr /I "backend_port" ports.json') do set BACKEND_PORT=%%~a
+REM Read ports from .env with fallback defaults
+set BACKEND_PORT=8000
+set FRONTEND_PORT=3000
+if exist .env (
+    for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
+        if /I "%%a"=="BACKEND_PORT" set BACKEND_PORT=%%b
+        if /I "%%a"=="FRONTEND_PORT" set FRONTEND_PORT=%%b
+    )
+)
 set BACKEND_PORT=%BACKEND_PORT: =%
-
-for /f "tokens=2 delims=:," %%a in ('findstr /I "frontend_port" ports.json') do set FRONTEND_PORT=%%~a
 set FRONTEND_PORT=%FRONTEND_PORT: =%
 
 echo VITE_BACKEND_PORT=%BACKEND_PORT%> frontend\.env

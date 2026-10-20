@@ -1,24 +1,16 @@
 import os
-import json
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
 from qdrant_client import models
-
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
-
-config_path = Path(__file__).resolve().parents[2] / "local_paths.json"
-try:
-    with open(config_path, "r", encoding="utf-8") as f:
-        PATHS_CONFIG = json.load(f)
-except Exception:
-    PATHS_CONFIG = {}
+import backend.core.env
 
 def get_dense_embedding_model(token: str | None = None, model: str | None = None) -> HuggingFaceEndpointEmbeddings:
-    hf_token = token or os.getenv("HF_TOKEN") or PATHS_CONFIG.get("HF_TOKEN")
-    model_name = model or os.getenv("HF_EMBEDDING_MODEL") or PATHS_CONFIG.get("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
+    hf_token = token or os.getenv("HF_API_KEY") or os.getenv("HF_TOKEN")
+    model_name = model or os.getenv("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
     if not hf_token:
-        raise ValueError("Chưa cấu hình HF_TOKEN trong local_paths.json hoặc biến môi trường.")
+        raise ValueError("Chưa cấu hình HF_API_KEY hoặc HF_TOKEN trong biến môi trường hoặc file .env.")
     dense_model = HuggingFaceEndpointEmbeddings(
         model=model_name,
         huggingfacehub_api_token=hf_token
@@ -29,8 +21,8 @@ def get_dense_embedding_model(token: str | None = None, model: str | None = None
 
 class JevReranker:
     def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
-        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY") or PATHS_CONFIG.get("TYPESAFE_API_KEY")
-        self.model = model or PATHS_CONFIG.get("RERANKER_MODEL", "jev-latest")
+        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
+        self.model = model or os.getenv("RERANKER_MODEL", "jev-latest")
         self.max_workers = max_workers
         self.client = TypeSafeClient(api_key=self.api_key, timeout=30.0) if self.api_key else None
         self.question = Noul(
@@ -49,7 +41,7 @@ class JevReranker:
 
         if not self.client:
             raise ValueError(
-                "Chưa cấu hình TYPESAFE_API_KEY. Vui lòng thiết lập biến môi trường TYPESAFE_API_KEY hoặc thêm vào local_paths.json."
+                "Chưa cấu hình TYPESAFE_API_KEY. Vui lòng thiết lập biến môi trường TYPESAFE_API_KEY hoặc thêm vào file .env."
             )
 
         def score_pair(pair):

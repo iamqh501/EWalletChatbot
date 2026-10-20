@@ -1,21 +1,14 @@
 import os
-import json
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor
 from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
-
-config_path = Path(__file__).resolve().parents[2] / "local_paths.json"
-try:
-    with open(config_path, "r", encoding="utf-8") as f:
-        PATHS_CONFIG = json.load(f)
-except Exception:
-    PATHS_CONFIG = {}
+import backend.core.env
 
 class HistoryScorer:
     def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
-        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY") or PATHS_CONFIG.get("TYPESAFE_API_KEY")
-        self.model = model or PATHS_CONFIG.get("RERANKER_MODEL", "jev-latest")
+        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
+        self.model = model or os.getenv("RERANKER_MODEL", "jev-latest")
         self.max_workers = max_workers
         self.client = TypeSafeClient(api_key=self.api_key, timeout=20.0) if self.api_key else None
         

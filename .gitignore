@@ -62,6 +62,7 @@ frontend/.env.local
 frontend/.env.*.local
 local_paths.json
 !local_paths.example.json
+!.env.example
 
 # ==============================================================================
 # Local Vector DB, Stores & Index State

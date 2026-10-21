@@ -3,7 +3,8 @@ from pydantic import BaseModel
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = ""
+    image: Optional[str] = None
     session_id: str = "default_session"
 
 

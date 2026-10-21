@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api")
 @router.post("/query")
 async def query_endpoint(req: QueryRequest):
     """Endpoint xử lý câu hỏi qua Agent với SSE streaming."""
-    return EventSourceResponse(orchestrator.stream_query(req.query, req.session_id))
+    return EventSourceResponse(orchestrator.stream_query(req.query, req.session_id, req.image))
 
 
 @router.get("/init-stream")

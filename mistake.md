@@ -6,7 +6,7 @@ Cause: Host Python 3.14 was upgraded to build 3.14.8, while .venv Scripts retain
 Fix: Copied updated python314.dll, python.exe, pythonw.exe, vcruntime DLLs, and standard extension .pyd and .dll files from Python314 root and DLLs folder into .venv/Scripts.
 
 ## Unsupported Hugging Face Router Model Identifier
-Problem: Configuring HF_MODEL_NAME to Qwen/Qwen3-8B:fastest caused HTTP 400 model_not_supported.
+Problem: Configuring HF_LLM_MODEL_NAME to Qwen/Qwen3-8B:fastest caused HTTP 400 model_not_supported.
 Cause: The specified model tag was not hosted or recognized on the Hugging Face Router endpoint.
 Fix: Switched to verified supported router model tags, such as Qwen/Qwen3.5-9B:deepinfra or inclusionAI/Ling-3.0-flash:fastest.
 
@@ -60,3 +60,28 @@ Fix: Deprecated local llama-server and switched to remote Hugging Face Router AP
 Problem: Importing backend.core.env failed with ModuleNotFoundError: No module named 'config' and TypeError on path operations.
 Cause: backend/core/env.py attempted to import config directly instead of backend.core.config, and attempted to use the slash operator on string BASE_DIR instead of os.path.join or pathlib.Path.
 Fix: Updated import to from backend.core.config import BASE_DIR, constructed ENV_FILE with os.path.join(BASE_DIR, ".env"), added exists check, and ensured bidirectional mapping between HF_API_KEY and HF_TOKEN.
+
+## Typographical Error in Hugging Face Router VLM Identifier
+Problem: Configuring HF_VLM_MODEL_NAME to iinclusionAI/Ling-3.0-flash-VL:fastest failed with HTTP 400 model_not_found.
+Cause: Provider namespace contained a duplicate leading character (iinclusionAI instead of inclusionAI).
+Fix: Fixed model tag to inclusionAI/Ling-3.0-flash-VL:fastest and implemented prefix sanitization in backend/core/env.py and backend/services/llm.py to automatically correct duplicate leading characters.
+
+## Indented Markdown Headers Breaking Text Splitter
+Problem: Markdown headers with leading spaces (e.g.   ## Tác vụ:) were ignored by MarkdownHeaderTextSplitter, causing adjacent sections to merge into one chunk.
+Cause: MarkdownHeaderTextSplitter requires header markers to start at the first character of each line.
+Fix: Added pre-processing line normalization in index_docs.py to strip leading indentation before header hashes (# , ## , ### ) prior to splitting.
+
+## Missing Data Purchase Section in App Instructions Document
+Problem: docs/cach_dung_app.md contained a duplicate Top-up section instead of a Data 4G/5G purchase task, preventing retrieval of data registration instructions.
+Cause: Copy-paste duplication during manual knowledge drafting.
+Fix: Corrected the duplicate block to Tác vụ: Mua gói cước Data 4G/5G with required_screen_id DATA_4G_5G, mirrored to docs/cach_dung_ap.md, and ran index_docs.py --mode update to refresh parent documents and vector embeddings.
+
+## App Screen Coupling in Vision-Language Prompt
+Problem: Hardcoding specific app screen IDs and layout descriptions in the VLM prompt created tight coupling, requiring prompt modifications whenever app interfaces change.
+Cause: VLM_REWRITE_SYSTEM_PROMPT initially contained explicit application screens (HOME, DATA_4G_5G, TOPUP_PHONE) and specific UI element assumptions.
+Fix: Generalized VLM_REWRITE_SYSTEM_PROMPT into an agnostic visual inspection and query rewriting instruction focusing purely on visible text, labels, amounts, and UI elements without hardcoded application screens.
+
+## Static Screen Normalization in Navigation Tool
+Problem: Hardcoded string checks in normalize_screen_id caused tool rigidity and potential divergence when screen definitions or titles changed.
+Cause: Navigation tool used fixed branching instead of querying navigation_map.json metadata.
+Fix: Implemented dynamic resolve_screen_id and build_navigation_path functions that inspect screens, titles, visual_cues, and global_navigation definitions loaded directly from navigation_map.json.

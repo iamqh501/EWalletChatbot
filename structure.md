@@ -17,22 +17,25 @@ E-Wallet and Telecom Assistant is a full-stack AI chatbot designed for e-wallet 
     - schemas.py: QueryRequest and HealthResponse data models
   - core: Application lifecycle, state management, and environment loaders
     - config.py: Paths, model constants, and directory definitions
-    - env.py: Environment loader syncing .env and Windows Registry (HKCU\Environment)
+    - env.py: Environment loader syncing .env, Windows Registry (HKCU/HKLM), and model/API key environment variables
     - state.py: AppState, background model loader, and SessionManager
   - prompts: System prompt definitions
     - routing.py: TOOL_ROUTING_SYSTEM_PROMPT for Call 1 tool selection
     - final_response.py: FINAL_RESPONSE_SYSTEM_PROMPT for Call 2 response synthesis
     - intent_resolver.py: Intent resolution 3-step prompt template
+    - vlm.py: VLM_REWRITE_SYSTEM_PROMPT for visual OCR and query rewriting
   - services: Core backend business logic
     - agent_orchestrator.py: Two-stage execution coordinator, stream handler, and tool caller
     - history_scorer.py: Session turn relevance evaluation using TypeSafe Jev
     - llm.py: LangChain ChatDeepSeek initialization with Hugging Face Router
     - retrieval.py: Hybrid search (dense and sparse) and Parent-Child Jev reranking
+    - vlm.py: VLMService vision-language streaming executor and query rewriter
   - tools: Executable agent tools
     - factory.py: AgentToolContext and LangChain tool factory functions (create_agent_tools)
     - general_knowledge.py: Qdrant retrieval and parent document fetcher
     - telecom_packages.py: Telecom package catalog filter and search engine
     - intent_resolver.py: Structured 3-step reasoning resolver
+    - app_navigation.py: Navigation map loader, dynamic screen resolver, and task guide retriever for VNPT Money app
     - schemas.py: Pydantic tool argument schemas
   - utils: Operational helpers
     - metrics.py: StreamMetricsTracker microsecond latency and token throughput recorder
@@ -48,6 +51,8 @@ E-Wallet and Telecom Assistant is a full-stack AI chatbot designed for e-wallet 
   - vite.config.js: Vite build configuration
   - package.json: Node dependencies and build scripts
 - docs: Knowledge base documents and telecom package data
+  - cach_dung_app.md: Step-by-step app usage instructions and required screen mappings
+  - navigation_map.json: Visual cues, screen transitions, and bottom tab bar definitions
   - goi_cuoc.json: Active telecom data plans catalog
   - goi_cuoc.xlsx: Source spreadsheet for data plans
   - 19 Markdown documents covering e-wallet policies, fees, and instructions
@@ -60,6 +65,10 @@ E-Wallet and Telecom Assistant is a full-stack AI chatbot designed for e-wallet 
 - structure.md: Current system architecture and state documentation
 
 ## Core Architecture and Execution Flow
+- Vision-Language Preprocessing Pipeline (VLM):
+  - When a query contains an attached image, VLMService triggers the remote vision-language model (HF_VLM_MODEL_NAME, defaulting to inclusionAI/Ling-3.0-flash-VL:fastest) with VLM_REWRITE_SYSTEM_PROMPT.
+  - Streams detailed visual analysis (OCR text, amounts, e-wallet UI elements, package banners) into the thinking accordion.
+  - Rewrites the user query to incorporate extracted visual facts and passes the enriched query into the standard two-stage execution pipeline.
 - Two-Stage LLM Call Architecture:
   - Call 1 (Routing and Tool Execution): Executes agent.astream with TOOL_ROUTING_SYSTEM_PROMPT. Analyzes query and conversation history to select either search_general_knowledge, search_telecom_packages, or resolve_intent. Streams internal reasoning (<think>) and tool invocation logs. If query is casual conversation, answers directly without Call 2.
   - Call 2 (Final Response Synthesis): Triggers when search context exists. Calls llm.astream with FINAL_RESPONSE_SYSTEM_PROMPT and retrieved documents. Produces strictly factual, unopinionated answers preserving original tables and lists without conversational filler.
@@ -93,6 +102,7 @@ E-Wallet and Telecom Assistant is a full-stack AI chatbot designed for e-wallet 
   1. Hypotheses: Enumerates literal and context-based interpretations.
   2. Evidence Evaluation: Cross-references query, conversation history, and task logic.
   3. Decision: Chooses optimal path, summarizes multiple interpretations, or proposes a concise clarifying question.
+- guide_app_task: Guides users through performing app tasks (phone topup, data package purchase, transaction history) by combining data-driven navigation_map.json screen routes with chunks retrieved from cach_dung_ap.md / cach_dung_app.md.
 
 ## API Endpoints and Telemetry
 - POST /api/query: Accepts session ID and user query, returns Server-Sent Events stream of thinking tokens, tool logs, answer tokens, and performance metrics.
@@ -106,6 +116,7 @@ E-Wallet and Telecom Assistant is a full-stack AI chatbot designed for e-wallet 
 - Accordion thinking block to isolate reasoning traces from answer text.
 - Markdown table formatting using remark-gfm with top-aligned cells.
 - Custom component renderer converting embedded raw br HTML line breaks into JSX br elements.
+- Image attachment button, clipboard image paste handler, thumbnail preview banner with remove control, and message bubble image viewer.
 
 ## Document Indexing and Conversion CLI (index_docs.py)
 - CLI Arguments:

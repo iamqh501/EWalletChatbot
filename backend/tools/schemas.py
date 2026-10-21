@@ -49,3 +49,14 @@ class ResolveIntentArgs(BaseModel):
         ...,
         description="Lý do chi tiết vì sao bạn không chắc chắn người dùng muốn gì (VD: câu hỏi có nhiều cách hiểu, thiếu chủ ngữ/thực thể tham chiếu)."
     )
+
+
+class GuideAppTaskArgs(BaseModel):
+    task_query: str = Field(
+        ...,
+        description="Mô tả tác vụ hoặc hành động người dùng muốn thực hiện trên ứng dụng VNPT Money (ví dụ: 'cách mua gói data', 'cách nạp tiền điện thoại', 'xem lịch sử giao dịch')."
+    )
+    current_screen: Optional[str] = Field(
+        None,
+        description="Mã hoặc tên màn hình hiện tại người dùng đang mở/đang đứng (ví dụ: 'HOME'/'Trang chủ' nếu đang ở trang chủ, hoặc tên màn hình cụ thể đang mở). Không phải là màn hình đích cần hướng dẫn tới. Có thể để trống nếu không rõ."
+    )

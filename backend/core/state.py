@@ -14,7 +14,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 from backend.core.config import QDRANT_PATH, STORE_PATH
 from backend.services.retrieval import get_dense_embedding_model, get_reranker
-from backend.services.llm import get_llm_model
+from backend.services.llm import get_llm_model, get_vlm_model
 
 
 class AppState:
@@ -23,6 +23,7 @@ class AppState:
     qdrant_client = None
     store = None
     llm = None
+    vlm = None
     load_task: Optional[asyncio.Task] = None
 
     # Init progress tracking
@@ -154,12 +155,19 @@ async def load_models_background():
         notify_init_step(f"Loading Reranker ({reranker_model_name})...")
         notify_component_loaded(f"Reranker: {reranker_model_name}")
 
-        llm_model_name = os.getenv("HF_MODEL_NAME", "inclusionAI/Ling-3.0-flash:fastest")
+        llm_model_name = os.getenv("HF_LLM_MODEL_NAME", os.getenv("HF_MODEL_NAME", "inclusionAI/Ling-3.0-flash:fastest"))
         notify_init_step(f"Connecting LLM ({llm_model_name})...")
         if not hasattr(app_state, "llm") or app_state.llm is None:
             app_state.llm = await asyncio.to_thread(get_llm_model)
 
         notify_component_loaded(f"LLM: {llm_model_name}")
+
+        vlm_model_name = os.getenv("HF_VLM_MODEL_NAME", "inclusionAI/Ling-3.0-flash-VL:fastest")
+        notify_init_step(f"Connecting VLM ({vlm_model_name})...")
+        if not hasattr(app_state, "vlm") or app_state.vlm is None:
+            app_state.vlm = await asyncio.to_thread(get_vlm_model)
+
+        notify_component_loaded(f"VLM: {vlm_model_name}")
 
         notify_init_complete()
         print("All models loaded successfully!")

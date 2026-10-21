@@ -157,6 +157,16 @@ def index_single_file(filename: str, client: QdrantClient, store, dense_model, s
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
 
+    # Chuẩn hóa các dòng header nếu có khoảng trắng thừa ở đầu dòng
+    normalized_lines = []
+    for line in content.split("\n"):
+        stripped = line.lstrip()
+        if stripped.startswith(("# ", "## ", "### ")):
+            normalized_lines.append(stripped)
+        else:
+            normalized_lines.append(line)
+    content = "\n".join(normalized_lines)
+
     # 1. Tách văn bản theo Header trước
     md_docs = markdown_splitter.split_text(content)
 

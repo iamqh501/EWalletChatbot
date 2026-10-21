@@ -1,6 +1,6 @@
 import json
 import asyncio
-from typing import AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict, Any, Optional
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessageChunk, ToolMessage
 
@@ -8,6 +8,7 @@ from backend.core.state import app_state, session_manager
 from backend.prompts import TOOL_ROUTING_SYSTEM_PROMPT, FINAL_RESPONSE_SYSTEM_PROMPT
 from backend.tools import AgentToolContext, create_agent_tools
 from backend.services.history_scorer import get_history_scorer
+from backend.services.vlm import vlm_service
 from backend.utils.metrics import StreamMetricsTracker
 
 
@@ -18,7 +19,7 @@ class AgentOrchestrator:
     - Lần 2: LLM tổng hợp dữ liệu tra cứu theo các ràng buộc nghiêm ngặt (không suy diễn, bảo toàn format).
     """
 
-    async def stream_query(self, query: str, session_id: str = "default_session") -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_query(self, query: str, session_id: str = "default_session", image: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
         try:
             # 1. Đảm bảo mô hình AI đã nạp hoàn tất
             if hasattr(app_state, "load_task") and app_state.load_task and not app_state.load_task.done():
@@ -29,6 +30,26 @@ class AgentOrchestrator:
             if llm is None:
                 yield {"event": "status", "data": json.dumps({"step": "error", "status": "error", "text": "Lỗi: Chưa load được LLM."})}
                 return
+
+            in_thinking = False
+
+            # 1.5. Xử lý VLM nếu câu hỏi có đính kèm ảnh
+            if image and isinstance(image, str) and image.strip():
+                yield {"event": "token", "data": json.dumps({"text": "<think>\n[VLM] Đang kích hoạt mô hình Vision-Language để phân tích hình ảnh và viết lại câu hỏi...\n\n"})}
+                in_thinking = True
+
+                vlm_res = None
+                async for item in vlm_service.stream_describe_and_rewrite(query, image):
+                    if item.get("done"):
+                        vlm_res = item.get("result")
+                    else:
+                        token_text = item.get("token", "")
+                        if token_text:
+                            yield {"event": "token", "data": json.dumps({"text": token_text})}
+
+                if vlm_res and vlm_res.get("rewritten_query"):
+                    query = vlm_res["rewritten_query"]
+                    yield {"event": "token", "data": json.dumps({"text": f"\n\n[Query Rewrite hoàn tất]: Câu hỏi đưa vào pipeline: \"{query}\"\n\n"})}
 
             session_manager.ensure_session(session_id)
             past_turns = session_manager.conversations[session_id]
@@ -48,7 +69,11 @@ class AgentOrchestrator:
 
             # In kết quả đánh giá tương đồng ra frontend khối thinking
             debug_text = eval_result["debug_text"]
-            yield {"event": "token", "data": json.dumps({"text": f"<think>\n{debug_text}\n"})}
+            if not in_thinking:
+                yield {"event": "token", "data": json.dumps({"text": f"<think>\n{debug_text}\n"})}
+                in_thinking = True
+            else:
+                yield {"event": "token", "data": json.dumps({"text": f"{debug_text}\n"})}
             in_thinking = True
 
             history_context_text = eval_result.get("context_text", "")
@@ -140,7 +165,7 @@ class AgentOrchestrator:
                             yield {"event": "token", "data": json.dumps({"text": log_text})}
 
             # --- LẦN GỌI LLM 2: Tổng hợp kết quả từ Tool với các constraint nghiêm ngặt ---
-            has_search_context = any(item.get("tool") in ("search_general_knowledge", "search_telecom_packages") for item in retrieved_context)
+            has_search_context = any(item.get("tool") in ("search_general_knowledge", "search_telecom_packages", "guide_app_task") for item in retrieved_context)
             if has_search_context:
                 context_blocks = []
                 if history_context_text:
@@ -159,6 +184,8 @@ class AgentOrchestrator:
                             context_blocks.append("Kết quả tra cứu kiến thức chung:\n" + "\n\n".join(doc_texts))
                     elif item["tool"] == "search_telecom_packages":
                         context_blocks.append(f"Kết quả tra cứu gói cước viễn thông:\n{item['data']}")
+                    elif item["tool"] == "guide_app_task":
+                        context_blocks.append(f"[KẾT QUẢ ĐIỀU HƯỚNG VÀ HƯỚNG DẪN TÁC VỤ APP]:\n{item['data']}")
 
                 full_context_text = "\n\n".join(context_blocks)
 
@@ -230,6 +257,8 @@ class AgentOrchestrator:
                     for ch in chunks:
                         turn_tool_output_parts.append(f"[{ch.get('source', 'Tài liệu')}]\n{ch.get('content', '')}")
                 elif item["tool"] == "search_telecom_packages":
+                    turn_tool_output_parts.append(str(item.get("data", "")))
+                elif item["tool"] == "guide_app_task":
                     turn_tool_output_parts.append(str(item.get("data", "")))
             turn_tool_output = "\n\n".join(turn_tool_output_parts) if turn_tool_output_parts else ""
 

@@ -365,3 +365,123 @@ body {
 }
 
 
+
+
+/* Image Attachment and Preview Styles */
+.attach-btn {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.attach-btn:hover:not(:disabled) {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: none !important;
+}
+
+.image-preview-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  max-width: fit-content;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.image-preview-thumbnail-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.image-preview-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.image-preview-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+  color: white !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid var(--bg-main) !important;
+  padding: 0 !important;
+  transition: transform 0.15s;
+}
+
+.image-preview-remove-btn:hover {
+  transform: scale(1.15);
+  background: #dc2626 !important;
+}
+
+.image-preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.image-preview-filename {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-main);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-preview-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.user-image-container {
+  margin-bottom: 10px;
+}
+
+.user-attached-image {
+  max-width: 280px;
+  max-height: 220px;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.user-attached-image:hover {
+  opacity: 0.95;
+  transform: scale(1.01);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

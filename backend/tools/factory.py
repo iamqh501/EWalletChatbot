@@ -5,7 +5,8 @@ from langchain_core.tools import tool
 from backend.tools.schemas import (
     SearchGeneralKnowledgeArgs,
     SearchTelecomPackagesArgs,
-    ResolveIntentArgs
+    ResolveIntentArgs,
+    GuideAppTaskArgs
 )
 from backend.tools.general_knowledge import (
     execute_search_general_knowledge,
@@ -13,6 +14,7 @@ from backend.tools.general_knowledge import (
 )
 from backend.tools.telecom_packages import execute_search_telecom_packages
 from backend.tools.intent_resolver import execute_resolve_intent
+from backend.tools.app_navigation import execute_guide_app_task
 
 
 @dataclass
@@ -26,7 +28,8 @@ class AgentToolContext:
     limits: Dict[str, int] = field(default_factory=lambda: {
         "search_general_knowledge": 1,
         "search_telecom_packages": 1,
-        "resolve_intent": 1
+        "resolve_intent": 1,
+        "guide_app_task": 1
     })
     tool_logs: List[str] = field(default_factory=list)
     retrieved_context: List[Dict[str, Any]] = field(default_factory=list)
@@ -121,6 +124,33 @@ def create_resolve_intent_tool(context: AgentToolContext):
     return resolve_intent
 
 
+def create_guide_app_task_tool(context: AgentToolContext):
+    """Tạo LangChain tool hướng dẫn thao tác và điều hướng trên ứng dụng VNPT Money."""
+    @tool(args_schema=GuideAppTaskArgs, return_direct=True)
+    def guide_app_task(task_query: str, current_screen: Optional[str] = None) -> str:
+        """Hướng dẫn cách thực hiện một tác vụ trên app (nạp điện thoại, mua data, xem lịch sử...) và cách điều hướng màn hình."""
+        if context.limits.get("guide_app_task", 0) <= 0:
+            return "[HỆ THỐNG] Bạn đã hết lượt gọi tool guide_app_task."
+        context.limits["guide_app_task"] -= 1
+
+        res = execute_guide_app_task(
+            task_query=task_query,
+            current_screen=current_screen,
+            dense_model=getattr(context.app_state, "dense_model", None),
+            sparse_model=getattr(context.app_state, "sparse_model", None),
+            client=getattr(context.app_state, "qdrant_client", None),
+            store=getattr(context.app_state, "store", None)
+        )
+        context.retrieved_context.append({"tool": "guide_app_task", "data": res})
+
+        context.tool_logs.append(
+            f"**[GỌI TOOL: guide_app_task]**\n- Tác vụ: {task_query}\n- Màn hình hiện tại: {current_screen or 'Chưa xác định'}\n\n```\n{res}\n```\n"
+        )
+        return res
+
+    return guide_app_task
+
+
 def create_agent_tools(context: Optional[AgentToolContext] = None) -> List[Any]:
     """
     Factory khởi tạo danh sách tất cả LangChain Tools phục vụ AgentOrchestrator.
@@ -131,5 +161,6 @@ def create_agent_tools(context: Optional[AgentToolContext] = None) -> List[Any]:
     return [
         create_search_general_knowledge_tool(context),
         create_search_telecom_packages_tool(context),
+        create_guide_app_task_tool(context),
         create_resolve_intent_tool(context)
     ]

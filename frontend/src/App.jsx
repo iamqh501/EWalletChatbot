@@ -4,7 +4,7 @@ import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { Send, Loader2, Bot, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Loader2, Bot, User, ChevronDown, ChevronUp, Image as ImageIcon, X } from 'lucide-react';
 import './App.css';
 
 function parseMessage(text) {
@@ -170,6 +170,43 @@ const getInitBubbleContent = (components, isReady, loadingText) => {
 
 function App() {
   const [query, setQuery] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleImageSelect = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setSelectedImage({
+        file,
+        dataUrl: e.target.result,
+        name: file.name
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleImageSelect(file);
+          e.preventDefault();
+          break;
+        }
+      }
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [systemStatus, setSystemStatus] = useState('');
@@ -274,9 +311,20 @@ function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!query.trim() || isLoading || !isSystemReady) return;
+    if ((!query.trim() && !selectedImage) || isLoading || !isSystemReady) return;
 
-    const userMessage = { role: 'user', content: query };
+    const currentText = query.trim();
+    const currentImage = selectedImage ? selectedImage.dataUrl : null;
+
+    const userMessage = { 
+      role: 'user', 
+      content: currentText, 
+      image: currentImage 
+    };
+    setSelectedImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     setMessages((prev) => [...prev, userMessage]);
     setQuery('');
     setIsLoading(true);
@@ -293,7 +341,10 @@ function App() {
       const response = await fetch(`http://127.0.0.1:${import.meta.env.VITE_BACKEND_PORT || 8000}/api/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userMessage.content }),
+        body: JSON.stringify({ 
+          query: currentText || 'Hãy phân tích hình ảnh này và cung cấp thông tin liên quan.',
+          image: currentImage 
+        }),
       });
 
       const reader = response.body.getReader();
@@ -397,7 +448,20 @@ function App() {
             return (
               <div key={index} className="message-row user-row">
                 <div className="message-bubble user-bubble">
-                  <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
+                  {msg.image && (
+                    <div className="user-image-container">
+                      <img 
+                        src={msg.image} 
+                        alt="Đính kèm từ người dùng" 
+                        className="user-attached-image" 
+                        onClick={() => window.open(msg.image, '_blank')}
+                        title="Click để xem ảnh kích thước gốc"
+                      />
+                    </div>
+                  )}
+                  {msg.content && (
+                    <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
+                  )}
                 </div>
                 <div className="avatar user-avatar"><User size={20} /></div>
               </div>
@@ -442,17 +506,58 @@ function App() {
             <span>{initLoadingText || 'Loading...'}</span>
           </div>
         )}
+        {selectedImage && (
+          <div className="image-preview-container">
+            <div className="image-preview-thumbnail-wrap">
+              <img src={selectedImage.dataUrl} alt="Preview" className="image-preview-thumbnail" />
+              <button 
+                type="button" 
+                className="image-preview-remove-btn" 
+                onClick={removeImage}
+                title="Xóa ảnh đính kèm"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="image-preview-meta">
+              <span className="image-preview-filename">{selectedImage.name || 'Ảnh đính kèm'}</span>
+              <span className="image-preview-hint">Đã sẵn sàng gửi kèm câu hỏi</span>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="input-form">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            accept="image/*" 
+            style={{ display: 'none' }} 
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                handleImageSelect(e.target.files[0]);
+              }
+            }} 
+          />
+          <button 
+            type="button" 
+            className="attach-btn" 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading || !isSystemReady}
+            title="Đính kèm hình ảnh (hoặc dán ảnh từ clipboard)"
+          >
+            <ImageIcon size={20} />
+          </button>
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Hỏi về tài liệu của bạn..."
+            onPaste={handlePaste}
+            placeholder={selectedImage ? "Nhập thêm câu hỏi kèm theo ảnh (hoặc Enter để gửi)..." : "Hỏi về tài liệu của bạn (hoặc dán/đính kèm ảnh)..."}
             disabled={isLoading}
           />
           <button 
             type="submit" 
-            disabled={isLoading || !query.trim() || !isSystemReady}
+            disabled={isLoading || (!query.trim() && !selectedImage) || !isSystemReady}
             title={!isSystemReady ? "System loading..." : "Gửi"}
           >
             {isLoading ? <Loader2 className="spinner" size={20} /> : <Send size={20} />}

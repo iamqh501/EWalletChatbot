@@ -6,12 +6,10 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
 
 from langchain_deepseek import ChatDeepSeek
-import backend.core.env
-from backend.core.config import HF_ROUTER_BASE_URL, DEFAULT_HF_LLM_MODEL, DEFAULT_HF_VLM_MODEL
+from backend.core.config import HF_ROUTER_BASE_URL, HF_LLM_MODEL, HF_VLM_MODEL
 
 logger = logging.getLogger(__name__)
 
-HF_BASE_URL = HF_ROUTER_BASE_URL
 
 def get_llm_model(temperature=0.0, **kwargs):
     max_tokens = kwargs.get("num_predict", kwargs.get("max_tokens", None))
@@ -24,12 +22,11 @@ def get_llm_model(temperature=0.0, **kwargs):
     if not hf_token:
         raise ValueError("Chưa cấu hình HF_API_KEY hoặc HF_TOKEN trong biến môi trường hoặc file .env.")
 
-    hf_model = os.getenv("HF_LLM_MODEL_NAME", os.getenv("HF_MODEL_NAME", DEFAULT_HF_LLM_MODEL))
-    logger.info("[LLM] Đang sử dụng model Hugging Face Router: %s", hf_model)
+    logger.info("[LLM] Đang sử dụng model Hugging Face Router: %s", HF_LLM_MODEL)
     return ChatDeepSeek(
-        api_base=HF_BASE_URL,
+        api_base=HF_ROUTER_BASE_URL,
         api_key=hf_token,
-        model=hf_model,
+        model=HF_LLM_MODEL,
         temperature=temperature,
         max_tokens=max_tokens,
         stream_usage=True,
@@ -50,15 +47,11 @@ def get_vlm_model(temperature=0.0, **kwargs):
     if not hf_token:
         raise ValueError("Chưa cấu hình HF_API_KEY hoặc HF_TOKEN trong biến môi trường hoặc file .env.")
 
-    hf_vlm_model = os.getenv("HF_VLM_MODEL_NAME", DEFAULT_HF_VLM_MODEL)
-    if hf_vlm_model.startswith("iinclusionAI/"):
-        hf_vlm_model = "inclusionAI/" + hf_vlm_model[len("iinclusionAI/"):]
-
-    logger.info("[VLM] Đang sử dụng model Hugging Face Router: %s", hf_vlm_model)
+    logger.info("[VLM] Đang sử dụng model Hugging Face Router: %s", HF_VLM_MODEL)
     return ChatDeepSeek(
-        api_base=HF_BASE_URL,
+        api_base=HF_ROUTER_BASE_URL,
         api_key=hf_token,
-        model=hf_vlm_model,
+        model=HF_VLM_MODEL,
         temperature=temperature,
         max_tokens=max_tokens,
         stream_usage=True,

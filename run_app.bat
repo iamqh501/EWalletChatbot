@@ -21,12 +21,6 @@ set BACKEND_PORT=%BACKEND_PORT: =%
 set FRONTEND_PORT=%FRONTEND_PORT: =%
 set ADMIN_PORT=%ADMIN_PORT: =%
 
-(
-echo VITE_BACKEND_PORT=%BACKEND_PORT%
-echo VITE_USER_PORT=%FRONTEND_PORT%
-echo VITE_ADMIN_PORT=%ADMIN_PORT%
-) > frontend\.env
-
 echo [INFO] Ports: Backend: %BACKEND_PORT%, User Chatbot: %FRONTEND_PORT%, Admin Docs: %ADMIN_PORT%
 
 echo [INFO] Dang kiem tra va don dep cac tien trinh cu tren port %BACKEND_PORT%, %FRONTEND_PORT%, %ADMIN_PORT%...

@@ -35,8 +35,8 @@ export default function AdminApp() {
 
   const fileInputRef = useRef(null);
   const notifTimerRef = useRef(null);
-  const backendPort = import.meta.env.VITE_BACKEND_PORT || 8000;
-  const userPort = import.meta.env.VITE_USER_PORT || 3000;
+  const backendPort = import.meta.env.BACKEND_PORT || 8000;
+  const userPort = import.meta.env.FRONTEND_PORT || 3000;
   const baseUrl = '/api';
   const fallbackBaseUrl = `http://127.0.0.1:${backendPort}/api`;
   const userChatbotUrl = `http://127.0.0.1:${userPort}`;

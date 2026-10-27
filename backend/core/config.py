@@ -23,6 +23,9 @@ NAVIGATION_DIR = os.path.join(DOCS_DIR, "navigation")
 ENV_FILE = os.path.join(BASE_DIR, ".env")
 STATE_FILE = os.path.join(DOCS_DIR, "file_state.json")
 
+# Load environment variables (.env & Windows Registry)
+import backend.core.env  # noqa: E402, F401
+
 # Specific domain knowledge files
 TELECOM_PACKAGES_FILE = os.path.join(TELECOM_DIR, "goi_cuoc.json")
 TELECOM_EXCEL_FILE = os.path.join(TELECOM_DIR, "goi_cuoc.xlsx")
@@ -34,17 +37,19 @@ APP_GUIDE_REL_PATHS = [
 ]
 FAQ_EXCEL_FILE = os.path.join(FAQ_DIR, "qa.xlsx")
 
-# Default model identifiers & endpoints
-DEFAULT_HF_LLM_MODEL = "inclusionAI/Ling-3.0-flash:fastest"
-DEFAULT_HF_VLM_MODEL = "inclusionAI/Ling-3.0-flash-VL:fastest"
-DEFAULT_EMBEDDING_MODEL = "google/embeddinggemma-300m"
-DEFAULT_SPARSE_MODEL = "Qdrant/bm25"
-DEFAULT_RERANKER_MODEL = "jev-latest"
+# Model identifiers & endpoints
+HF_LLM_MODEL = "inclusionAI/Ling-3.0-flash:fastest"
+HF_VLM_MODEL = "inclusionAI/Ling-3.0-flash-VL:fastest"
+EMBEDDING_MODEL = "google/embeddinggemma-300m"
+SPARSE_MODEL = "Qdrant/bm25"
+RERANKER_MODEL = "jev-latest"
 HF_ROUTER_BASE_URL = "https://router.huggingface.co/v1"
 
-# Default networking
-DEFAULT_HOST = "127.0.0.1"
-DEFAULT_BACKEND_PORT = 8000
+# Networking configuration (loaded from .env with defaults)
+HOST = "127.0.0.1"
+BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000").strip())
+FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "3000").strip())
+ADMIN_PORT = int(os.getenv("ADMIN_PORT", "3001").strip())
 
 # Create directories if not existing
 for _dir_path in [QDRANT_PATH, STORE_PATH, DOCS_DIR, KNOWLEDGE_DIR, FAQ_DIR, TELECOM_DIR, NAVIGATION_DIR]:

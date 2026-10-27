@@ -113,11 +113,6 @@ HF_API_KEY=your_huggingface_api_key_here
 BACKEND_PORT=8000
 FRONTEND_PORT=3000
 ADMIN_PORT=3001
-
-HF_LLM_MODEL_NAME=inclusionAI/Ling-3.0-flash:fastest
-HF_VLM_MODEL_NAME=inclusionAI/Ling-3.0-flash-VL:fastest
-HF_EMBEDDING_MODEL=google/embeddinggemma-300m
-RERANKER_MODEL=jev-latest
 ```
 
 ### 3. Initialize the Knowledge Base (First Run)

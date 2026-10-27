@@ -1,13 +1,18 @@
+import path from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const rootEnvDir = path.resolve(import.meta.dirname, '..')
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
-  const backendPort = env.VITE_BACKEND_PORT || env.BACKEND_PORT || '8000'
-  const userPort = parseInt(env.VITE_USER_PORT || env.FRONTEND_PORT || '3000', 10)
+  const env = loadEnv(mode, rootEnvDir, '')
+  const backendPort = env.BACKEND_PORT || '8000'
+  const userPort = parseInt(env.FRONTEND_PORT || '3000', 10)
 
   return {
+    envDir: rootEnvDir,
+    envPrefix: ['BACKEND_', 'FRONTEND_', 'ADMIN_'],
     plugins: [react()],
     cacheDir: 'node_modules/.vite_user',
     server: {

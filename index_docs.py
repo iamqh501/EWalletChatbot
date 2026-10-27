@@ -23,7 +23,7 @@ from backend.services.retrieval import get_dense_embedding_model
 
 from backend.core.config import (
     QDRANT_PATH, STORE_PATH, DOCS_DIR, STATE_FILE,
-    COLLECTION_NAME, CATEGORIES, TELECOM_EXCEL_FILE, TELECOM_PACKAGES_FILE
+    COLLECTION_NAME, CATEGORIES, TELECOM_EXCEL_FILE, TELECOM_PACKAGES_FILE, SPARSE_MODEL
 )
 
 from backend.services.doc_manager import (
@@ -58,7 +58,7 @@ def init_embeddings():
     """Khởi tạo mô hình dense (google/embeddinggemma-300m qua Hugging Face) và sparse embedding."""
     print("Khởi tạo Embeddings...")
     dense_model = get_dense_embedding_model()
-    sparse_model = SparseTextEmbedding(model_name="Qdrant/bm25")
+    sparse_model = SparseTextEmbedding(model_name=SPARSE_MODEL)
     return dense_model, sparse_model
 
 

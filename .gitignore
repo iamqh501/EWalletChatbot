@@ -59,11 +59,6 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
-frontend/.env
-frontend/.env.local
-frontend/.env.*.local
-local_paths.json
-!local_paths.example.json
 !.env.example
 
 # ==============================================================================
@@ -80,7 +75,6 @@ chunks_output/
 # ==============================================================================
 *.pid
 backend.pid
-frontend.pid
 frontend_user.pid
 frontend_admin.pid
 

@@ -1,4 +1,3 @@
-import os
 import time
 import json
 import asyncio
@@ -14,8 +13,8 @@ from langchain_classic.storage.encoder_backed import EncoderBackedStore
 from langchain_core.documents import Document
 from backend.core.config import (
     QDRANT_PATH, STORE_PATH,
-    DEFAULT_EMBEDDING_MODEL, DEFAULT_SPARSE_MODEL, DEFAULT_RERANKER_MODEL,
-    DEFAULT_HF_LLM_MODEL, DEFAULT_HF_VLM_MODEL
+    EMBEDDING_MODEL, SPARSE_MODEL, RERANKER_MODEL,
+    HF_LLM_MODEL, HF_VLM_MODEL
 )
 from backend.services.retrieval import get_dense_embedding_model, get_reranker
 from backend.services.llm import get_llm_model, get_vlm_model
@@ -172,37 +171,32 @@ session_manager = SessionManager()
 async def load_models_background():
     logger.info("Loading AI Models into memory...")
     try:
-        dense_model_name = os.getenv("HF_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
-        notify_init_step(f"Loading Dense Embedding ({dense_model_name})...")
+        notify_init_step(f"Loading Dense Embedding ({EMBEDDING_MODEL})...")
         app_state.dense_model = await asyncio.to_thread(get_dense_embedding_model)
-        notify_component_loaded(f"Dense Embedding: {dense_model_name}")
+        notify_component_loaded(f"Dense Embedding: {EMBEDDING_MODEL}")
 
-        sparse_model_name = DEFAULT_SPARSE_MODEL
-        notify_init_step(f"Loading Sparse Embedding ({sparse_model_name})...")
+        notify_init_step(f"Loading Sparse Embedding ({SPARSE_MODEL})...")
         app_state.sparse_model = await asyncio.to_thread(
             SparseTextEmbedding,
-            model_name=sparse_model_name
+            model_name=SPARSE_MODEL
         )
-        notify_component_loaded(f"Sparse Embedding: {sparse_model_name}")
+        notify_component_loaded(f"Sparse Embedding: {SPARSE_MODEL}")
 
-        reranker = get_reranker()
-        reranker_model_name = getattr(reranker, "model", None) or os.getenv("RERANKER_MODEL", DEFAULT_RERANKER_MODEL)
-        notify_init_step(f"Loading Reranker ({reranker_model_name})...")
-        notify_component_loaded(f"Reranker: {reranker_model_name}")
+        get_reranker()
+        notify_init_step(f"Loading Reranker ({RERANKER_MODEL})...")
+        notify_component_loaded(f"Reranker: {RERANKER_MODEL}")
 
-        llm_model_name = os.getenv("HF_LLM_MODEL_NAME", os.getenv("HF_MODEL_NAME", DEFAULT_HF_LLM_MODEL))
-        notify_init_step(f"Connecting LLM ({llm_model_name})...")
+        notify_init_step(f"Connecting LLM ({HF_LLM_MODEL})...")
         if not hasattr(app_state, "llm") or app_state.llm is None:
             app_state.llm = await asyncio.to_thread(get_llm_model)
 
-        notify_component_loaded(f"LLM: {llm_model_name}")
+        notify_component_loaded(f"LLM: {HF_LLM_MODEL}")
 
-        vlm_model_name = os.getenv("HF_VLM_MODEL_NAME", DEFAULT_HF_VLM_MODEL)
-        notify_init_step(f"Connecting VLM ({vlm_model_name})...")
+        notify_init_step(f"Connecting VLM ({HF_VLM_MODEL})...")
         if not hasattr(app_state, "vlm") or app_state.vlm is None:
             app_state.vlm = await asyncio.to_thread(get_vlm_model)
 
-        notify_component_loaded(f"VLM: {vlm_model_name}")
+        notify_component_loaded(f"VLM: {HF_VLM_MODEL}")
 
         notify_init_complete()
         logger.info("All models loaded successfully!")

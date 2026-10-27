@@ -1,22 +1,21 @@
 import logging
 import os
-from pathlib import Path
 from typing import List, Dict, Any, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor
 from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
-import backend.core.env
-from backend.core.config import DEFAULT_RERANKER_MODEL
+from backend.core.config import RERANKER_MODEL
 from backend.tools.schemas import HistoryEvalResult, ConversationTurn
 
 logger = logging.getLogger(__name__)
 
+
 class HistoryScorer:
     def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
         self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
-        self.model = model or os.getenv("RERANKER_MODEL", DEFAULT_RERANKER_MODEL)
+        self.model = model or RERANKER_MODEL
         self.max_workers = max_workers
         self.client = TypeSafeClient(api_key=self.api_key, timeout=20.0) if self.api_key else None
-        
+
         self.relevance_question = Noul(
             instructions=(
                 "Đánh giá mức độ liên quan (relevance score từ 0.0 đến 1.0) giữa tin nhắn lịch sử và câu hỏi hiện tại của người dùng. "
@@ -41,7 +40,7 @@ class HistoryScorer:
         if not self.client:
             logger.warning("[HistoryScorer] Chưa cấu hình TYPESAFE_API_KEY.")
             return 0.0
-        
+
         content = self.format_turn_content(turn)
         state = {
             "current_query": current_query,
@@ -102,14 +101,12 @@ class HistoryScorer:
         # u_i = a * d_i + (1 - a) * average_by_j(d_bridge_ij)
         # với d_bridge_ij = 2 * d_i * r_ij / (d_i + r_ij)
         scored_messages = []
-        turn_map = {item[0]["id"]: item for item in score_results}
-
         for turn, diff, d_i in score_results:
             turn_id = turn["id"]
             r_ij_list = []
             bridge_list = []
 
-            for other_turn, other_diff, other_d_i in score_results:
+            for other_turn, other_diff, _ in score_results:
                 other_id = other_turn["id"]
                 if other_id == turn_id:
                     continue
@@ -143,9 +140,7 @@ class HistoryScorer:
             })
 
         # 3. Lọc các message đạt ngưỡng score >= 0.7 làm context cho LLM
-        # Sắp xếp các message hợp lệ: ưu tiên theo thứ tự gần nhất (diff nhỏ nhất) hoặc score cao nhất
         valid_messages = [item for item in scored_messages if item["passed"]]
-        # Giữ thứ tự thời gian tự nhiên cho context
         valid_messages_sorted = sorted(valid_messages, key=lambda x: x["turn"]["id"])
 
         context_blocks = []
@@ -153,7 +148,7 @@ class HistoryScorer:
             turn = item["turn"]
             diff = item["diff"]
             u_score = item["u_i"]
-            
+
             block_lines = [f"- Tin nhắn ({diff} message trước | Độ tương đồng: {u_score:.4f}):"]
             block_lines.append(f"  User: {turn.get('user_query', '')}")
             block_lines.append(f"  AI: {turn.get('agent_output', '')}")
@@ -161,8 +156,7 @@ class HistoryScorer:
 
         context_text = "\n\n".join(context_blocks)
 
-        # 4. Soạn thông tin debug ngắn gọn ra frontend phần thinking theo format yêu cầu:
-        # Chỉ in các message vượt ngưỡng threshold, sắp xếp theo thứ tự lịch sử từ lâu nhất trước tới gần đây.
+        # 4. Soạn thông tin debug ngắn gọn ra frontend phần thinking
         if not valid_messages_sorted:
             debug_text = "History context: 0 messages\n"
         else:
@@ -184,7 +178,9 @@ class HistoryScorer:
             debug_text=debug_text
         )
 
+
 _scorer_instance = None
+
 
 def get_history_scorer() -> HistoryScorer:
     global _scorer_instance

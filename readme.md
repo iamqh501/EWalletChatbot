@@ -1,6 +1,6 @@
 # E-Wallet & Telecom AI Assistant
 
-An asynchronous, two-stage agentic AI assistant built for **VNPT Money** e-wallet customer support, in-app screen navigation, personal transaction inquiry, and **VinaPhone** telecommunications package consultation. The system combines multimodal Vision-Language preprocessing, Parent-Child Hybrid RAG (Qdrant + FastEmbed + Hugging Face Embeddings), TypeSafe Jev (`Noul`) semantic reranking and conversation history scoring, and a dual-interface React 19 / Vite 8 frontend.
+An asynchronous, two-stage agentic AI assistant built for **E-Wallet** customer support, in-app screen navigation, personal transaction inquiry, and telecommunications package consultation. The system combines multimodal Vision-Language preprocessing, Parent-Child Hybrid RAG (Qdrant + FastEmbed + Hugging Face Embeddings), TypeSafe Jev (`Noul`) semantic reranking and conversation history scoring, and a dual-interface React 19 / Vite 8 frontend.
 
 ---
 
@@ -47,7 +47,7 @@ An asynchronous, two-stage agentic AI assistant built for **VNPT Money** e-walle
 │   │        └─ (Policies, fee schedules & FAQ qa.xlsx)           │   │
 │   │                                                             │   │
 │   ├───> Tool 2: [ search_telecom_packages ] ────────────────────┤   │
-│   │        └─ (VinaPhone data/voice plan catalog filter)        │   │
+│   │        └─ (Telecom data/voice plan catalog filter)          │   │
 │   │                                                             │   │
 │   ├───> Tool 3: [ guide_app_task ] ─────────────────────────────┤   │
 │   │        └─ (Task guide retrieval & navigation_map grounding) │   │
@@ -94,7 +94,7 @@ Decoupling tool routing from final response generation prevents instruction inte
   In these cases, Stage 1 terminates without calling any tool and hands control directly to Stage 2.
 - **Mandatory Domain Routing Rules**:
   - `get_transaction_history`: Invoked when the user asks to view personal transaction records (transfers, receipts, bill payments, top-ups) or responds to a privacy consent prompt (`đồng ý`, `cho phép`, `không đồng ý`).
-  - `guide_app_task`: Invoked when the user asks for step-by-step UI navigation or tap instructions inside the VNPT Money app (e.g., how to top up a phone, buy 4G/5G data, or navigate to the History tab). Never used for fetching actual personal transaction records.
+  - `guide_app_task`: Invoked when the user asks for step-by-step UI navigation or tap instructions inside the E-Wallet app (e.g., how to top up a phone, buy 4G/5G data, or navigate to the History tab). Never used for fetching actual personal transaction records.
   - `search_telecom_packages`: Invoked for mobile data and voice plan queries (plan code, price, cycle length, daily data allowance).
   - `search_general_knowledge`: Invoked for e-wallet policies, service fees, terms and conditions, bank linking, and general FAQ items.
   - `resolve_intent`: Invoked when the query is underspecified, ambiguous, or missing critical entity references.
@@ -103,7 +103,7 @@ Decoupling tool routing from final response generation prevents instruction inte
 - **100% Mandatory Execution**: Stage 2 runs on **every turn**—whether responding to a casual greeting, answering from conversation history, requesting privacy consent, or synthesizing multi-tool outputs—guaranteeing a uniform persona and formatting standard.
 - **Strict Grounding & Factual Integrity**:
   - Synthesizes answers strictly from `[DỮ LIỆU ĐÃ TRA CỨU ĐƯỢC TỪ HỆ THỐNG VÀ LỊCH SỬ]`. Never fabricates policies, fees, or package attributes.
-  - **Greetings**: Responds concisely and politely as the VNPT Money virtual assistant.
+  - **Greetings**: Responds concisely and politely as the E-Wallet virtual assistant.
   - **History-Based Answers**: Remains consistent with previously established conversation facts.
   - **Ambiguity Resolution (`resolve_intent`)**: Clearly presents the most probable interpretations or asks a concise clarifying question.
   - **Missing Information**: Explicitly states that no matching documentation was found rather than guessing.
@@ -130,7 +130,7 @@ All tools are dynamically instantiated per request via `create_agent_tools(conte
 - **Output**: Typed `KnowledgeChunk` list with source filenames, relevance scores, and parent chunk content.
 
 ### 2. `search_telecom_packages`
-- **Purpose**: Searches and filters VinaPhone mobile data/voice packages based on structured criteria.
+- **Purpose**: Searches and filters mobile data and voice telecom packages based on structured criteria.
 - **Arguments (`SearchTelecomPackagesArgs`)**:
   - `package_name` (`Optional[str]`): Package code or substring (e.g., `YOLO90_12T`, `BIG`, `D169G`).
   - `price_min` / `price_max` (`Optional[float]`): Price range in VND.
@@ -141,7 +141,7 @@ All tools are dynamically instantiated per request via `create_agent_tools(conte
 - **Output**: JSON-formatted list of matching packages (`Package Name`, `Price (VND)`, `Cycle (days)`, `Data per day (GB)`).
 
 ### 3. `guide_app_task`
-- **Purpose**: Provides step-by-step UI operation instructions and screen navigation paths inside the VNPT Money app.
+- **Purpose**: Provides step-by-step UI operation instructions and screen navigation paths inside the E-Wallet app.
 - **Arguments (`GuideAppTaskArgs`)**:
   - `task_query` (`str`): Description of the task the user wants to perform.
   - `current_screen` (`Optional[str]`): Name or ID of the screen the user is currently viewing (defaults to `HOME` if unspecified).
@@ -199,7 +199,6 @@ All tools are dynamically instantiated per request via `create_agent_tools(conte
 - **Vision-Language Model (VLM)**: Configurable via `HF_VLM_MODEL_NAME` (default: `inclusionAI/Ling-3.0-flash-VL:fastest`).
   - Uses LangChain `with_structured_output(VLMResponse)` to stream progressive token deltas (`description` and `rewritten_query`) into the UI thinking block while guaranteeing schema-validated extraction without brittle regular expressions.
 - **Inference Provider**: Hugging Face Router API (`https://router.huggingface.co/v1`) via `ChatDeepSeek` with native reasoning stream support and `stream_usage=True`.
-- **Hardware Execution**: Runs strictly in CPU mode (`CUDA_VISIBLE_DEVICES=-1`) for deterministic stability on consumer laptops.
 
 ### 3. Multi-Category Knowledge Base & In-Process `DocumentManager`
 - **Categorized Directory Layout (`docs/`)**:

@@ -1,0 +1,71 @@
+{
+  "global_navigation": {
+    "description": "Thanh điều hướng dưới đáy màn hình (Bottom Tab Bar), chỉ xuất hiện ở các màn hình chính (HOME, REWARDS, HISTORY, PROFILE). Không xuất hiện ở các màn hình con (như Nạp điện thoại, Data 4G/5G).",
+    "items": [
+      {
+        "target": "HOME",
+        "action": "Bấm vào icon 'Trang chủ' (hình ngôi nhà) ở góc dưới cùng bên trái"
+      },
+      {
+        "target": "REWARDS",
+        "action": "Bấm vào icon 'Ưu đãi' (hình hộp quà) ở thanh điều hướng dưới cùng"
+      },
+      {
+        "target": "HISTORY",
+        "action": "Bấm vào icon 'Lịch sử' (hình đồng hồ) ở thanh điều hướng dưới cùng (bên phải nút QR ở giữa)"
+      },
+      {
+        "target": "PROFILE",
+        "action": "Bấm vào icon 'Cá nhân' (hình đầu người) ở góc dưới cùng bên phải"
+      }
+    ]
+  },
+  "screens": {
+    "HOME": {
+      "title": "Trang chủ VNPT Money",
+      "parent": null,
+      "has_bottom_bar": true,
+      "visual_cues": "Có thể có khung 'Để bắt đầu giao dịch với VNPT Money, bạn cần thực hiện: Kích hoạt nguồn tiền' kèm nút 'Kích hoạt' màu xanh dương. Bên dưới là lưới 8 icon dịch vụ gồm: 'Nạp điện thoại' (có nhãn -2.4% màu cam), 'Hoá đơn viễn thông', 'Tiền điện', 'Tiền nước', 'Vietlott VinaPhone' (nhãn HOT), 'Data 4G/5G' (icon cột sóng 5G màu vàng), 'Siêu Tích Lũy' (nhãn 9%), 'Dịch vụ khác'. Dưới cùng là thanh điều hướng có tab 'Trang chủ' đang sáng màu xanh dương.",
+      "navigates_to": [
+        {
+          "target": "TOPUP_PHONE",
+          "action": "Bấm vào icon 'Nạp điện thoại' (có nhãn -2.4% màu cam) ở hàng đầu tiên, góc trái trong lưới dịch vụ"
+        },
+        {
+          "target": "DATA_4G_5G",
+          "action": "Bấm vào icon 'Data 4G/5G' (hình cột sóng kèm chữ 5G) ở hàng thứ hai trong lưới dịch vụ"
+        }
+      ]
+    },
+    "REWARDS": {
+      "title": "Ưu đãi dành cho bạn",
+      "parent": null,
+      "has_bottom_bar": true,
+      "visual_cues": "Tiêu đề 'Ưu đãi dành cho bạn' ở góc trên bên trái, góc phải có khung số điểm (ví dụ '0 Điểm'). Có banner 'Chương trình hội viên mới... VinaPhone Plus', thanh 'Tìm kiếm ưu đãi', 3 nút 'Nhập mã', 'Kho quà', 'Kho vật phẩm'. Bên dưới là lưới danh mục ưu đãi (Viễn thông, Truyền hình, Quét QR...) và mục 'SĂN ƯU ĐÃI'. Thanh điều hướng dưới cùng đang sáng ở tab 'Ưu đãi'.",
+      "navigates_to": []
+    },
+    "HISTORY": {
+      "title": "Lịch Sử Giao Dịch",
+      "parent": null,
+      "has_bottom_bar": true,
+      "visual_cues": "Tiêu đề chính giữa trên cùng là 'Lịch Sử Giao Dịch'. Ngay dưới là 3 tab ngang: 'Giao Dịch', 'Thống Kê', 'Sao Kê' (có nhãn Mới màu cam). Có ô 'Tìm kiếm giao dịch' kèm nút 'Bộ lọc' bên phải, và các nút lọc nhanh dạng viên thuốc: 'Tất cả', 'Chuyển tiền', 'Nhận tiền', 'Nạp tiền...'. Nếu trống sẽ có hình bàn tay cầm kính lúp và chữ 'Không tìm thấy thông tin nào'. Thanh điều hướng dưới cùng đang sáng ở tab 'Lịch sử'.",
+      "navigates_to": []
+    },
+    "TOPUP_PHONE": {
+      "title": "Nạp điện thoại",
+      "parent": "HOME",
+      "has_bottom_bar": false,
+      "exit_action": "Bấm nút 'X' ở góc trên cùng bên phải màn hình để đóng và quay lại Trang chủ (HOME)",
+      "visual_cues": "Tiêu đề 'Nạp điện thoại' ở góc trên bên trái, góc trên phải có cụm nút '... | X'. Khung hiển thị logo nhà mạng (ví dụ 'vinaphone'), số điện thoại đang chọn 'Nạp cho (Tôi)', nút 'Tôi' và icon Danh bạ bên phải. Phần 'Mệnh giá nạp' gồm lưới các ô số tiền (10.000, 20.000, 30.000, 50.000, 100.000, 200.000, 300.000, 500.000) kèm dòng chữ 'Giảm ...đ' và ô 'Số khác'. Dưới cùng có phần 'Gói Data dành cho bạn', dòng 'Tạm tính' và nút 'Nạp ngay' màu xanh dương.",
+      "navigates_to": []
+    },
+    "DATA_4G_5G": {
+      "title": "Data 4G/5G",
+      "parent": "HOME",
+      "has_bottom_bar": false,
+      "exit_action": "Bấm nút 'X' ở góc trên cùng bên phải màn hình để đóng và quay lại Trang chủ (HOME)",
+      "visual_cues": "Tiêu đề 'Data 4G/5G' ở góc trên bên trái, góc phải có icon kính lúp tìm kiếm và cụm nút '... | X'. Khung số điện thoại 'Nạp cho (Tôi)' kèm logo nhà mạng. Khung màu xanh dương 'Gợi ý gói phù hợp' có hình linh vật robot ở góc phải (ví dụ gói D7TM). Bên dưới là thanh tab ngang: 'Combo', '4G/5G', 'Nạp data', 'Tiết kiệm...'. Khi ở tab '4G/5G' sẽ có các bộ lọc 'Dung lượng', 'Chu kỳ', 'Tiện ích' và danh sách gói cước (như U1500, BIG120_6T) kèm nút 'Đăng ký'. Khi ở tab 'Combo' có thể hiển thị 'Không tìm thấy gói cước phù hợp'.",
+      "navigates_to": []
+    }
+  }
+}

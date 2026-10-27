@@ -5,7 +5,10 @@ from langchain_core.tools import tool
 from backend.tools.schemas import (
     SearchGeneralKnowledgeArgs,
     SearchTelecomPackagesArgs,
-    ResolveIntentArgs
+    ResolveIntentArgs,
+    GuideAppTaskArgs,
+    GetTransactionHistoryArgs,
+    ToolResultItem
 )
 from backend.tools.general_knowledge import (
     execute_search_general_knowledge,
@@ -13,6 +16,8 @@ from backend.tools.general_knowledge import (
 )
 from backend.tools.telecom_packages import execute_search_telecom_packages
 from backend.tools.intent_resolver import execute_resolve_intent
+from backend.tools.app_navigation import execute_guide_app_task
+from backend.tools.transaction_history import execute_get_transaction_history
 
 
 @dataclass
@@ -22,20 +27,24 @@ class AgentToolContext:
     """
     app_state: Any = None
     llm: Any = None
+    session_id: str = "default_session"
     history_context_text: str = ""
+    transaction_history_consent: bool = False
     limits: Dict[str, int] = field(default_factory=lambda: {
         "search_general_knowledge": 1,
         "search_telecom_packages": 1,
-        "resolve_intent": 1
+        "resolve_intent": 1,
+        "guide_app_task": 1,
+        "get_transaction_history": 1
     })
     tool_logs: List[str] = field(default_factory=list)
-    retrieved_context: List[Dict[str, Any]] = field(default_factory=list)
+    retrieved_context: List[ToolResultItem] = field(default_factory=list)
 
 
 def create_search_general_knowledge_tool(context: AgentToolContext):
     """Tạo LangChain tool tra cứu kiến thức chung về ví điện tử gắn với context."""
     @tool(args_schema=SearchGeneralKnowledgeArgs, return_direct=True)
-    def search_general_knowledge(query: str) -> List[Dict[str, Any]]:
+    def search_general_knowledge(query: str) -> List[Any]:
         """Tìm kiếm thông tin hướng dẫn sử dụng, chính sách chung về ví điện tử."""
         if context.limits.get("search_general_knowledge", 0) <= 0:
             return [{"error": "[HỆ THỐNG] Bạn đã hết lượt gọi tool này. Hãy sử dụng thông tin hiện có để trả lời."}]
@@ -48,7 +57,18 @@ def create_search_general_knowledge_tool(context: AgentToolContext):
             client=getattr(context.app_state, "qdrant_client", None),
             store=getattr(context.app_state, "store", None)
         )
-        context.retrieved_context.append({"tool": "search_general_knowledge", "data": res})
+
+        if not res:
+            ctx_block = "Kết quả tra cứu kiến thức chung: Không tìm thấy tài liệu phù hợp."
+        else:
+            doc_texts = [f"[Tài liệu {i} - Nguồn: {ch.get('source', '')}]\n{ch.get('content', '')}" for i, ch in enumerate(res, 1)]
+            ctx_block = "Kết quả tra cứu kiến thức chung:\n" + "\n\n".join(doc_texts)
+
+        context.retrieved_context.append(ToolResultItem(
+            tool="search_general_knowledge",
+            context_block=ctx_block,
+            data=res
+        ))
         tool_summary = format_chunks_summary_for_thinking(res)
         context.tool_logs.append(
             f"**[GỌI TOOL]**\n\n`search_general_knowledge(query=\"{query}\")`\n\n```\n{tool_summary}\n```\n"
@@ -85,7 +105,12 @@ def create_search_telecom_packages_tool(context: AgentToolContext):
             "data_gb_per_day_max": data_gb_per_day_max
         }
         res = execute_search_telecom_packages(**args_dict)
-        context.retrieved_context.append({"tool": "search_telecom_packages", "data": res})
+        ctx_block = f"Kết quả tra cứu gói cước viễn thông:\n{res}"
+        context.retrieved_context.append(ToolResultItem(
+            tool="search_telecom_packages",
+            context_block=ctx_block,
+            data=res
+        ))
 
         args_str = ", ".join([f"{k}={repr(v)}" for k, v in args_dict.items() if v is not None])
         short_res = res[:2500] + "..." if len(res) > 2500 else res
@@ -112,13 +137,103 @@ def create_resolve_intent_tool(context: AgentToolContext):
             history_context_text=context.history_context_text,
             llm=context.llm
         )
-        context.retrieved_context.append({"tool": "resolve_intent", "data": content})
+        ctx_block = f"[KẾT QUẢ PHÂN TÍCH Ý ĐỊNH]:\n{content}"
+        context.retrieved_context.append(ToolResultItem(
+            tool="resolve_intent",
+            context_block=ctx_block,
+            data=content
+        ))
         context.tool_logs.append(
             f"**[GỌI TOOL: resolve_intent]**\n- Lý do không chắc chắn: {uncertainty_reason}\n\n```\n{content}\n```\n"
         )
         return content
 
     return resolve_intent
+
+
+def create_guide_app_task_tool(context: AgentToolContext):
+    """Tạo LangChain tool hướng dẫn thao tác và điều hướng trên ứng dụng VNPT Money."""
+    @tool(args_schema=GuideAppTaskArgs, return_direct=True)
+    def guide_app_task(task_query: str, current_screen: Optional[str] = None) -> str:
+        """Hướng dẫn cách thực hiện một tác vụ trên app (nạp điện thoại, mua data, xem lịch sử...) và cách điều hướng màn hình."""
+        if context.limits.get("guide_app_task", 0) <= 0:
+            return "[HỆ THỐNG] Bạn đã hết lượt gọi tool guide_app_task."
+        context.limits["guide_app_task"] -= 1
+
+        res = execute_guide_app_task(
+            task_query=task_query,
+            current_screen=current_screen,
+            dense_model=getattr(context.app_state, "dense_model", None),
+            sparse_model=getattr(context.app_state, "sparse_model", None),
+            client=getattr(context.app_state, "qdrant_client", None),
+            store=getattr(context.app_state, "store", None)
+        )
+        ctx_block = f"[KẾT QUẢ ĐIỀU HƯỚNG VÀ HƯỚNG DẪN TÁC VỤ APP]:\n{res}"
+        context.retrieved_context.append(ToolResultItem(
+            tool="guide_app_task",
+            context_block=ctx_block,
+            data=res
+        ))
+
+        short_res = res[:2500] + "..." if len(res) > 2500 else res
+        context.tool_logs.append(
+            f"**[GỌI TOOL: guide_app_task]**\n- Tác vụ: {task_query}\n- Màn hình hiện tại: {current_screen or 'Chưa xác định'}\n\n```\n{short_res}\n```\n"
+        )
+        return res
+
+    return guide_app_task
+
+
+def create_get_transaction_history_tool(context: AgentToolContext):
+    """Tạo LangChain tool tra cứu lịch sử giao dịch cá nhân gắn với context và session."""
+    @tool(args_schema=GetTransactionHistoryArgs, return_direct=True)
+    def get_transaction_history(
+        query: Optional[str] = None,
+        user_consent: Optional[bool] = None
+    ) -> Any:
+        """Tra cứu lịch sử biến động số dư và giao dịch cá nhân của người dùng (chuyển tiền, nhận tiền, thanh toán). Cần quyền truy cập thông tin cá nhân."""
+        if context.limits.get("get_transaction_history", 0) <= 0:
+            return {"error": "[HỆ THỐNG] Bạn đã hết lượt gọi tool get_transaction_history."}
+        context.limits["get_transaction_history"] -= 1
+
+        res = execute_get_transaction_history(
+            session_id=context.session_id,
+            user_consent=user_consent,
+            query=query
+        )
+
+        status = getattr(res, "status", None) or (res.get("status") if isinstance(res, dict) else "")
+        if status == "consent_required":
+            context.transaction_history_consent = True
+            msg_text = getattr(res, "message", None) or (res.get("message", "") if isinstance(res, dict) else "")
+            log_detail = "Trạng thái: Chưa có quyền (Consent required). Cần người dùng xác nhận Cho phép/Không cho phép."
+            ctx_block = (
+                "[YÊU CẦU QUYỀN TRUY CẬP THÔNG TIN CÁ NHÂN]:\n"
+                f"{msg_text}\n"
+                "- Tình trạng: Người dùng chưa cấp quyền truy cập thông tin cá nhân trong phiên này.\n"
+                "- Yêu cầu: Hãy giải thích ngắn gọn, lịch sự rằng hệ thống cần được người dùng cho phép truy cập thông tin cá nhân để xem lịch sử giao dịch, và mời người dùng bấm lựa chọn 'Cho phép' hoặc 'Không cho phép' ngay ở khung chat bên dưới."
+            )
+        elif status == "success":
+            tx_list = getattr(res, "transactions", None) or (res.get("transactions", []) if isinstance(res, dict) else [])
+            data_text = getattr(res, "data_text", None) or (res.get("data_text", "") if isinstance(res, dict) else "")
+            log_detail = f"Trạng thái: Đã có quyền truy cập. Lấy thành công {len(tx_list)} giao dịch mẫu."
+            ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH CỦA NGƯỜI DÙNG]:\n{data_text}"
+        else:
+            log_detail = "Trạng thái: Đã tra cứu dữ liệu."
+            ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH]:\n{res}"
+
+        context.retrieved_context.append(ToolResultItem(
+            tool="get_transaction_history",
+            context_block=ctx_block,
+            data=res
+        ))
+
+        context.tool_logs.append(
+            f"**[GỌI TOOL: get_transaction_history]**\n- Query: {query or 'Mặc định'}\n- User Consent: {user_consent}\n- {log_detail}\n"
+        )
+        return res if isinstance(res, dict) else res.model_dump()
+
+    return get_transaction_history
 
 
 def create_agent_tools(context: Optional[AgentToolContext] = None) -> List[Any]:
@@ -129,7 +244,9 @@ def create_agent_tools(context: Optional[AgentToolContext] = None) -> List[Any]:
         context = AgentToolContext()
 
     return [
+        create_get_transaction_history_tool(context),
         create_search_general_knowledge_tool(context),
         create_search_telecom_packages_tool(context),
-        create_resolve_intent_tool(context)
+        create_guide_app_task_tool(context),
+        create_resolve_intent_tool(context),
     ]

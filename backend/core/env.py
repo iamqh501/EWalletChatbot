@@ -1,13 +1,10 @@
 import os
 import sys
 from dotenv import load_dotenv
-from backend.core.config import BASE_DIR
+from backend.core.config import BASE_DIR, ENV_FILE
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8')
-
-# Đường dẫn tới thư mục gốc của dự án và file .env
-ENV_FILE = os.path.join(BASE_DIR, ".env")
 
 
 def sync_windows_registry_env():
@@ -48,6 +45,18 @@ def load_environment():
         os.environ["HF_TOKEN"] = os.environ["HF_API_KEY"]
     elif "HF_TOKEN" in os.environ and "HF_API_KEY" not in os.environ:
         os.environ["HF_API_KEY"] = os.environ["HF_TOKEN"]
+
+    # Đồng bộ tương thích ngược giữa HF_LLM_MODEL_NAME và HF_MODEL_NAME
+    if "HF_LLM_MODEL_NAME" in os.environ and "HF_MODEL_NAME" not in os.environ:
+        os.environ["HF_MODEL_NAME"] = os.environ["HF_LLM_MODEL_NAME"]
+    elif "HF_MODEL_NAME" in os.environ and "HF_LLM_MODEL_NAME" not in os.environ:
+        os.environ["HF_LLM_MODEL_NAME"] = os.environ["HF_MODEL_NAME"]
+
+    # Chuẩn hóa tiền tố nhà cung cấp cho HF_VLM_MODEL_NAME nếu gặp lỗi typo
+    if "HF_VLM_MODEL_NAME" in os.environ:
+        vlm_name = os.environ["HF_VLM_MODEL_NAME"].strip()
+        if vlm_name.startswith("iinclusionAI/"):
+            os.environ["HF_VLM_MODEL_NAME"] = "inclusionAI/" + vlm_name[len("iinclusionAI/"):]
 
 
 # Tự động thực thi khi module được nạp

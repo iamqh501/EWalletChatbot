@@ -5,11 +5,13 @@ pydantic
 qdrant-client
 langchain-huggingface
 fastembed
-docling
-transformers
 langchain-core
 langchain-classic
 langchain-text-splitters
 langchain-deepseek
 langchain
 python-dotenv
+pandas
+openpyxl
+python-multipart
+typesafe-sdk

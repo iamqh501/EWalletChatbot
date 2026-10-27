@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:user": "vite --config vite.config.js",
+    "dev:admin": "vite --config vite.admin.config.js",
     "build": "vite build",
+    "build:user": "vite build --config vite.config.js",
+    "build:admin": "vite build --config vite.admin.config.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },

@@ -2,6 +2,8 @@ import os
 import time
 import json
 import asyncio
+import logging
+from collections import OrderedDict
 from typing import Optional, List, Dict, Any, Tuple
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -10,11 +12,16 @@ from fastembed import SparseTextEmbedding
 from langchain_classic.storage import LocalFileStore
 from langchain_classic.storage.encoder_backed import EncoderBackedStore
 from langchain_core.documents import Document
-from langchain_core.messages import HumanMessage, AIMessage
-
-from backend.core.config import QDRANT_PATH, STORE_PATH
+from backend.core.config import (
+    QDRANT_PATH, STORE_PATH,
+    DEFAULT_EMBEDDING_MODEL, DEFAULT_SPARSE_MODEL, DEFAULT_RERANKER_MODEL,
+    DEFAULT_HF_LLM_MODEL, DEFAULT_HF_VLM_MODEL
+)
 from backend.services.retrieval import get_dense_embedding_model, get_reranker
-from backend.services.llm import get_llm_model
+from backend.services.llm import get_llm_model, get_vlm_model
+from backend.tools.schemas import ConversationTurn, TelecomPackage
+
+logger = logging.getLogger(__name__)
 
 
 class AppState:
@@ -23,6 +30,7 @@ class AppState:
     qdrant_client = None
     store = None
     llm = None
+    vlm = None
     load_task: Optional[asyncio.Task] = None
 
     # Init progress tracking
@@ -30,6 +38,10 @@ class AppState:
     current_loading_step: str = "Starting server..."
     loaded_components: List[str] = []
     init_listeners: List[asyncio.Queue] = []
+
+    # Cached static data
+    telecom_packages: List[TelecomPackage] = []
+    nav_map: dict = {}
 
 
 app_state = AppState()
@@ -77,40 +89,58 @@ def notify_init_error(err_msg: str):
 
 
 class SessionManager:
-    def __init__(self):
-        self.histories: Dict[str, List[Any]] = {}
-        self.conversations: Dict[str, List[Dict[str, Any]]] = {}
+    """Quản lý phiên hội thoại với giới hạn bộ nhớ LRU và dọn dẹp ma trận tương quan cũ."""
+
+    def __init__(self, max_sessions: int = 500, max_turns_per_session: int = 50):
+        self.max_sessions = max_sessions
+        self.max_turns_per_session = max_turns_per_session
+        self.conversations: OrderedDict[str, List[ConversationTurn]] = OrderedDict()
         self.relevance_matrices: Dict[str, Dict[Tuple[int, int], float]] = {}
+        self.consents: Dict[str, bool] = {}
 
     def ensure_session(self, session_id: str):
-        if session_id not in self.histories:
-            self.histories[session_id] = []
-        if session_id not in self.conversations:
-            self.conversations[session_id] = []
-        if session_id not in self.relevance_matrices:
-            self.relevance_matrices[session_id] = {}
+        if session_id in self.conversations:
+            self.conversations.move_to_end(session_id)
+            return
 
-    def get_recent_turns(self, session_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+        # Dọn dẹp session cũ nhất nếu vượt quá giới hạn
+        if len(self.conversations) >= self.max_sessions:
+            oldest_id, _ = self.conversations.popitem(last=False)
+            self.relevance_matrices.pop(oldest_id, None)
+            self.consents.pop(oldest_id, None)
+
+        self.conversations[session_id] = []
+        self.relevance_matrices[session_id] = {}
+        self.consents[session_id] = False
+
+    def get_consent(self, session_id: str) -> bool:
         self.ensure_session(session_id)
-        return self.conversations[session_id][-limit:]
+        return self.consents.get(session_id, False)
+
+    def set_consent(self, session_id: str, consent: bool):
+        self.ensure_session(session_id)
+        self.consents[session_id] = bool(consent)
+
+    def get_recent_turns(self, session_id: str, limit: int = 10) -> List[ConversationTurn]:
+        self.ensure_session(session_id)
+        return list(self.conversations[session_id][-limit:])
 
     def get_relevance_matrix(self, session_id: str) -> Dict[Tuple[int, int], float]:
         self.ensure_session(session_id)
-        return self.relevance_matrices[session_id]
+        return dict(self.relevance_matrices[session_id])
 
     def save_turn(
         self,
         session_id: str,
         user_query: str,
         agent_output: str,
-        tool_output: str,
         scored_messages: List[Dict[str, Any]]
     ):
         self.ensure_session(session_id)
         past_turns = self.conversations[session_id]
         r_matrix = self.relevance_matrices[session_id]
 
-        new_turn_id = len(past_turns) + 1
+        new_turn_id = (past_turns[-1].id + 1) if past_turns else 1
 
         # Lưu lại u_i làm r_ij cho các query sau (đối xứng)
         for item in scored_messages:
@@ -119,29 +149,35 @@ class SessionManager:
             r_matrix[(new_turn_id, past_id)] = u_score
             r_matrix[(past_id, new_turn_id)] = u_score
 
-        past_turns.append({
-            "id": new_turn_id,
-            "user_query": user_query,
-            "tool_output": tool_output,
-            "agent_output": agent_output
-        })
+        # Cắt tỉa các khóa quá cũ trong r_matrix để tránh rò rỉ RAM (chỉ giữ turn trong phạm vi 20 turn gần nhất)
+        cutoff_id = new_turn_id - 20
+        stale_keys = [k for k in r_matrix if k[0] < cutoff_id or k[1] < cutoff_id]
+        for sk in stale_keys:
+            r_matrix.pop(sk, None)
 
-        self.histories[session_id].append(HumanMessage(content=user_query))
-        self.histories[session_id].append(AIMessage(content=agent_output))
+        past_turns.append(ConversationTurn(
+            id=new_turn_id,
+            user_query=user_query,
+            agent_output=agent_output
+        ))
+
+        # Giữ số lượt hội thoại không vượt quá max_turns_per_session
+        if len(past_turns) > self.max_turns_per_session:
+            self.conversations[session_id] = past_turns[-self.max_turns_per_session:]
 
 
 session_manager = SessionManager()
 
 
 async def load_models_background():
-    print("Loading AI Models into memory...")
+    logger.info("Loading AI Models into memory...")
     try:
-        dense_model_name = os.getenv("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
+        dense_model_name = os.getenv("HF_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
         notify_init_step(f"Loading Dense Embedding ({dense_model_name})...")
         app_state.dense_model = await asyncio.to_thread(get_dense_embedding_model)
         notify_component_loaded(f"Dense Embedding: {dense_model_name}")
 
-        sparse_model_name = "Qdrant/bm25"
+        sparse_model_name = DEFAULT_SPARSE_MODEL
         notify_init_step(f"Loading Sparse Embedding ({sparse_model_name})...")
         app_state.sparse_model = await asyncio.to_thread(
             SparseTextEmbedding,
@@ -150,25 +186,29 @@ async def load_models_background():
         notify_component_loaded(f"Sparse Embedding: {sparse_model_name}")
 
         reranker = get_reranker()
-        reranker_model_name = getattr(reranker, "model", None) or os.getenv("RERANKER_MODEL", "jev-latest")
+        reranker_model_name = getattr(reranker, "model", None) or os.getenv("RERANKER_MODEL", DEFAULT_RERANKER_MODEL)
         notify_init_step(f"Loading Reranker ({reranker_model_name})...")
         notify_component_loaded(f"Reranker: {reranker_model_name}")
 
-        llm_model_name = os.getenv("HF_MODEL_NAME", "inclusionAI/Ling-3.0-flash:fastest")
+        llm_model_name = os.getenv("HF_LLM_MODEL_NAME", os.getenv("HF_MODEL_NAME", DEFAULT_HF_LLM_MODEL))
         notify_init_step(f"Connecting LLM ({llm_model_name})...")
         if not hasattr(app_state, "llm") or app_state.llm is None:
             app_state.llm = await asyncio.to_thread(get_llm_model)
 
         notify_component_loaded(f"LLM: {llm_model_name}")
 
+        vlm_model_name = os.getenv("HF_VLM_MODEL_NAME", DEFAULT_HF_VLM_MODEL)
+        notify_init_step(f"Connecting VLM ({vlm_model_name})...")
+        if not hasattr(app_state, "vlm") or app_state.vlm is None:
+            app_state.vlm = await asyncio.to_thread(get_vlm_model)
+
+        notify_component_loaded(f"VLM: {vlm_model_name}")
+
         notify_init_complete()
-        print("All models loaded successfully!")
+        logger.info("All models loaded successfully!")
     except Exception as e:
         import traceback
-        traceback.print_exc()
-        with open("error.log", "w", encoding="utf-8") as f:
-            f.write(traceback.format_exc())
-        print(f"CRITICAL ERROR: Failed to load models: {e}")
+        logger.error("CRITICAL ERROR: Failed to load models: %s\n%s", e, traceback.format_exc())
         notify_init_error(str(e))
         raise e
 
@@ -196,8 +236,17 @@ async def lifespan(app: FastAPI):
     )
     notify_component_loaded("Knowledge Base: Qdrant")
 
+    # Cache dữ liệu tĩnh vào app_state
+    try:
+        from backend.tools.telecom_packages import load_package_data
+        from backend.tools.app_navigation import load_navigation_map
+        app_state.telecom_packages = load_package_data()
+        app_state.nav_map = load_navigation_map()
+    except Exception as e:
+        logger.warning("Failed to pre-cache telecom/nav data: %s", e)
+
     app_state.load_task = asyncio.create_task(load_models_background())
-    print(f"Hệ thống khởi động HTTP server hoàn tất trong {time.time() - t0_start:.2f}s. Đang nạp mô hình AI dưới nền...")
+    logger.info("Hệ thống khởi động HTTP server hoàn tất trong %.2fs. Đang nạp mô hình AI dưới nền...", time.time() - t0_start)
 
     yield
 

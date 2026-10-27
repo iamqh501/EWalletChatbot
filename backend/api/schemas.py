@@ -3,8 +3,15 @@ from pydantic import BaseModel
 
 
 class QueryRequest(BaseModel):
-    query: str
+    query: str = ""
+    image: Optional[str] = None
     session_id: str = "default_session"
+    consent: Optional[bool] = None
+
+
+class ConsentRequest(BaseModel):
+    session_id: str = "default_session"
+    consent: bool
 
 
 class HealthResponse(BaseModel):

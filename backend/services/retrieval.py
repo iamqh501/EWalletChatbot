@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -5,10 +6,12 @@ from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
 from qdrant_client import models
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 import backend.core.env
+from backend.core.config import COLLECTION_NAME, DEFAULT_EMBEDDING_MODEL, DEFAULT_RERANKER_MODEL
+from backend.tools.schemas import SearchResultItem
 
 def get_dense_embedding_model(token: str | None = None, model: str | None = None) -> HuggingFaceEndpointEmbeddings:
     hf_token = token or os.getenv("HF_API_KEY") or os.getenv("HF_TOKEN")
-    model_name = model or os.getenv("HF_EMBEDDING_MODEL", "google/embeddinggemma-300m")
+    model_name = model or os.getenv("HF_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL)
     if not hf_token:
         raise ValueError("Chưa cấu hình HF_API_KEY hoặc HF_TOKEN trong biến môi trường hoặc file .env.")
     dense_model = HuggingFaceEndpointEmbeddings(
@@ -22,7 +25,7 @@ def get_dense_embedding_model(token: str | None = None, model: str | None = None
 class JevReranker:
     def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
         self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
-        self.model = model or os.getenv("RERANKER_MODEL", "jev-latest")
+        self.model = model or os.getenv("RERANKER_MODEL", DEFAULT_RERANKER_MODEL)
         self.max_workers = max_workers
         self.client = TypeSafeClient(api_key=self.api_key, timeout=30.0) if self.api_key else None
         self.question = Noul(
@@ -54,7 +57,7 @@ class JevReranker:
                 )
                 return float(response.nouls["is_relevant"].noul)
             except Exception as e:
-                print(f"[JevReranker Error] {e}")
+                logger.error("JevReranker error: %s", e)
                 raise e
 
         with ThreadPoolExecutor(max_workers=min(self.max_workers, len(pairs))) as pool:
@@ -63,16 +66,31 @@ class JevReranker:
 
 reranker = None
 
+logger = logging.getLogger(__name__)
+
 def get_reranker():
     global reranker
     if reranker is None:
         reranker = JevReranker()
     return reranker
 
-def search_and_rerank(query: str, dense_model, sparse_model, client, store, collection_name: str, score_threshold: float = 0.6, top_k: int | None = None):
-    # Embed query
-    query_dense_vec = dense_model.embed_query(query)
-    query_sparse_res = list(sparse_model.embed([query]))[0]
+def search_and_rerank(
+    query: str,
+    dense_model,
+    sparse_model,
+    client,
+    store,
+    collection_name: str = COLLECTION_NAME,
+    score_threshold: float = 0.6,
+    top_k: int | None = None,
+    filter: models.Filter | None = None
+) -> list[SearchResultItem]:
+    # Embed query song song (Dense API + Sparse local)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        dense_future = pool.submit(dense_model.embed_query, query)
+        sparse_future = pool.submit(lambda q: list(sparse_model.embed([q]))[0], query)
+        query_dense_vec = dense_future.result()
+        query_sparse_res = sparse_future.result()
     
     # Qdrant Hybrid Search
     results = client.query_points(
@@ -82,6 +100,7 @@ def search_and_rerank(query: str, dense_model, sparse_model, client, store, coll
                 query=query_dense_vec,
                 using="dense",
                 limit=20,
+                filter=filter,
             ),
             models.Prefetch(
                 query=models.SparseVector(
@@ -90,6 +109,7 @@ def search_and_rerank(query: str, dense_model, sparse_model, client, store, coll
                 ),
                 using="sparse",
                 limit=20,
+                filter=filter,
             ),
         ],
         query=models.FusionQuery(fusion=models.Fusion.RRF),
@@ -122,34 +142,36 @@ def search_and_rerank(query: str, dense_model, sparse_model, client, store, coll
     reranker_model = get_reranker()
     rerank_scores = reranker_model.predict(pairs)
     
-    scored_parents = []
+    scored_parents: list[SearchResultItem] = []
     for (pid, pdoc), score in zip(valid_parents, rerank_scores):
-        scored_parents.append({
-            "parent_id": pid,
-            "score": score,
-            "source": os.path.basename(pdoc.metadata.get('file_path', 'Unknown')),
-            "page": pdoc.metadata.get('page_number', 'Unknown'),
-            "is_toc": pdoc.metadata.get('is_toc', False),
-            "content": pdoc.page_content
-        })
-    scored_parents.sort(key=lambda x: x["score"], reverse=True)
+        scored_parents.append(SearchResultItem(
+            parent_id=pid,
+            score=float(score),
+            source=os.path.basename(pdoc.metadata.get('file_path', 'Unknown')),
+            page=pdoc.metadata.get('page_number', 'Unknown'),
+            is_toc=pdoc.metadata.get('is_toc', False),
+            content=pdoc.page_content,
+            metadata=pdoc.metadata or {}
+        ))
+    scored_parents.sort(key=lambda x: x.score, reverse=True)
     
-    with open("debug_retrieval.log", "a", encoding="utf-8") as f_deb:
-        f_deb.write(f"\n========================================\n")
-        f_deb.write(f"Query: '{query}' | Qdrant child points: {len(results.points)} | Unique parent chunks: {len(scored_parents)}\n")
-        for rank, item in enumerate(scored_parents, 1):
-            txt_preview = item["content"].replace("\n", " ")[:120]
-            f_deb.write(f"  Rank {rank}: score={item['score']:.4f} | Source: {item['source']} | Content: {txt_preview}\n")
+    logger.debug(
+        "Query: '%s' | Qdrant child points: %d | Unique parent chunks: %d\n%s",
+        query, len(results.points), len(scored_parents),
+        "\n".join(
+            f"  Rank {rank}: score={item.score:.4f} | Source: {item.source} | Content: {item.content.replace(chr(10), ' ')[:120]}"
+            for rank, item in enumerate(scored_parents, 1)
+        )
+    )
     
     # Lọc theo ngưỡng score và lấy tối đa top_k parent documents
-    retrieved_parents = []
+    retrieved_parents: list[SearchResultItem] = []
     for item in scored_parents:
-        if item["score"] < score_threshold:
+        if item.score < score_threshold:
             break
         retrieved_parents.append(item)
         if top_k is not None and len(retrieved_parents) >= top_k:
             break
             
-    with open("debug_retrieval.log", "a", encoding="utf-8") as f_deb:
-        f_deb.write(f"-> Retrieved parents count (threshold >= {score_threshold}): {len(retrieved_parents)}\n")
+    logger.debug("-> Retrieved parents count (threshold >= %s): %d", score_threshold, len(retrieved_parents))
     return retrieved_parents

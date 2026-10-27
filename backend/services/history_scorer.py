@@ -1,14 +1,19 @@
+import logging
 import os
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor
 from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
 import backend.core.env
+from backend.core.config import DEFAULT_RERANKER_MODEL
+from backend.tools.schemas import HistoryEvalResult, ConversationTurn
+
+logger = logging.getLogger(__name__)
 
 class HistoryScorer:
     def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
         self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
-        self.model = model or os.getenv("RERANKER_MODEL", "jev-latest")
+        self.model = model or os.getenv("RERANKER_MODEL", DEFAULT_RERANKER_MODEL)
         self.max_workers = max_workers
         self.client = TypeSafeClient(api_key=self.api_key, timeout=20.0) if self.api_key else None
         
@@ -27,12 +32,6 @@ class HistoryScorer:
 
     def format_turn_content(self, turn: Dict[str, Any]) -> str:
         parts = [f"User: {turn.get('user_query', '').strip()}"]
-        tool_out = turn.get('tool_output', '').strip()
-        if tool_out:
-            # Rút gọn nhẹ nếu tool output quá dài để tối ưu độ trễ Jev
-            if len(tool_out) > 3000:
-                tool_out = tool_out[:3000] + "\n... (đã rút gọn dữ liệu tra cứu)"
-            parts.append(f"Tool Output:\n{tool_out}")
         ai_out = turn.get('agent_output', '').strip()
         if ai_out:
             parts.append(f"AI: {ai_out}")
@@ -40,7 +39,7 @@ class HistoryScorer:
 
     def score_single(self, current_query: str, turn: Dict[str, Any], diff: int) -> float:
         if not self.client:
-            print("[HistoryScorer] Chưa cấu hình TYPESAFE_API_KEY.")
+            logger.warning("[HistoryScorer] Chưa cấu hình TYPESAFE_API_KEY.")
             return 0.0
         
         content = self.format_turn_content(turn)
@@ -59,17 +58,17 @@ class HistoryScorer:
             score = float(resp.nouls["relevance"].noul)
             return round(score, 4)
         except Exception as e:
-            print(f"[HistoryScorer Error] Message {turn.get('id')}: {e}")
+            logger.error("[HistoryScorer Error] Message %s: %s", turn.get("id"), e)
             return 0.0
 
     def evaluate_recent_history(
         self,
         current_query: str,
-        recent_turns: List[Dict[str, Any]],
+        recent_turns: List[Union[ConversationTurn, Dict[str, Any]]],
         r_matrix: Dict[Tuple[int, int], float],
         a: float = 0.5,
         threshold: float = 0.7
-    ) -> Dict[str, Any]:
+    ) -> HistoryEvalResult:
         """
         Đánh giá mức độ tương đồng giữa current_query và tối đa 10 message gần nhất.
         recent_turns: danh sách message theo thứ tự thời gian tăng dần (cũ -> mới).
@@ -77,12 +76,12 @@ class HistoryScorer:
         m = len(recent_turns)
         if m == 0:
             debug_text = "History context: 0 messages\n"
-            return {
-                "scored_messages": [],
-                "valid_context": [],
-                "context_text": "",
-                "debug_text": debug_text
-            }
+            return HistoryEvalResult(
+                scored_messages=[],
+                valid_context=[],
+                context_text="",
+                debug_text=debug_text
+            )
 
         # 1. Tính d_i song song bằng ThreadPoolExecutor
         # Với recent_turns[k], vị trí cách query hiện tại là (m - k) message trước
@@ -157,8 +156,6 @@ class HistoryScorer:
             
             block_lines = [f"- Tin nhắn ({diff} message trước | Độ tương đồng: {u_score:.4f}):"]
             block_lines.append(f"  User: {turn.get('user_query', '')}")
-            if turn.get("tool_output"):
-                block_lines.append(f"  [Kết quả tra cứu trước đó]:\n{turn['tool_output']}")
             block_lines.append(f"  AI: {turn.get('agent_output', '')}")
             context_blocks.append("\n".join(block_lines))
 
@@ -180,12 +177,12 @@ class HistoryScorer:
 
             debug_text = "\n".join(debug_lines) + "\n"
 
-        return {
-            "scored_messages": scored_messages,
-            "valid_context": valid_messages_sorted,
-            "context_text": context_text,
-            "debug_text": debug_text
-        }
+        return HistoryEvalResult(
+            scored_messages=scored_messages,
+            valid_context=valid_messages_sorted,
+            context_text=context_text,
+            debug_text=debug_text
+        )
 
 _scorer_instance = None
 

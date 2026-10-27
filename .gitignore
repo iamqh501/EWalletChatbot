@@ -45,6 +45,8 @@ frontend/node_modules/
 frontend/dist/
 frontend/dist-ssr/
 frontend/.vite/
+frontend/.vite_user/
+frontend/.vite_admin/
 .eslintcache
 npm-debug.log*
 yarn-debug.log*
@@ -79,6 +81,8 @@ chunks_output/
 *.pid
 backend.pid
 frontend.pid
+frontend_user.pid
+frontend_admin.pid
 
 # ==============================================================================
 # IDE & Editor files
@@ -94,13 +98,15 @@ frontend.pid
 *.sln
 
 # ==============================================================================
-# AI Assistants / Agent Workspace
+# AI Assistants / Agent Workspace & Local Knowledge Files
 # ==============================================================================
 .agents/
 skills-lock.json
 .gemini/
 .claude/
 .cursor/
+structure.md
+mistake.md
 
 # ==============================================================================
 # Logs & Temporary Test Files

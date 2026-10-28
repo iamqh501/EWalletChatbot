@@ -1,6 +1,6 @@
 from typing import Optional, List
 from backend.core.state import session_manager
-from backend.tools.schemas import TransactionRecord, TransactionHistoryResult
+from backend.tools.schemas import TransactionRecord, TransactionHistoryResult, ToolResultItem
 
 PLACEHOLDER_TRANSACTIONS: List[TransactionRecord] = [
     TransactionRecord(
@@ -55,10 +55,10 @@ def execute_get_transaction_history(
     session_id: str,
     user_consent: Optional[bool] = None,
     query: Optional[str] = None
-) -> TransactionHistoryResult:
+) -> ToolResultItem:
     """
-    Thực thi kiểm tra quyền consent và truy xuất dữ liệu lịch sử giao dịch cá nhân.
-    Quyền truy cập được lưu persistent trong SessionManager của session tương ứng.
+    Thực thi kiểm tra quyền consent, truy xuất dữ liệu lịch sử giao dịch cá nhân
+    và đóng gói ToolResultItem.
     """
     if user_consent is not None:
         session_manager.set_consent(session_id, user_consent)
@@ -66,25 +66,51 @@ def execute_get_transaction_history(
     has_consent = session_manager.get_consent(session_id)
 
     if not has_consent:
-        return TransactionHistoryResult(
+        msg_text = (
+            "Yêu cầu cấp quyền truy cập thông tin cá nhân: Để tra cứu và hiển thị lịch sử giao dịch cá nhân, "
+            "hệ thống cần sự đồng ý của bạn để truy xuất dữ liệu cá nhân. "
+            "Vui lòng lựa chọn Cho phép hoặc Không cho phép trên khung chat để tiếp tục."
+        )
+        res = TransactionHistoryResult(
             status="consent_required",
             has_consent=False,
-            message=(
-                "Yêu cầu cấp quyền truy cập thông tin cá nhân: Để tra cứu và hiển thị lịch sử giao dịch cá nhân, "
-                "hệ thống cần sự đồng ý của bạn để truy xuất dữ liệu cá nhân. "
-                "Vui lòng lựa chọn Cho phép hoặc Không cho phép trên khung chat để tiếp tục."
-            )
+            message=msg_text
         )
+        log_detail = "Trạng thái: Chưa có quyền (Consent required). Cần người dùng xác nhận Cho phép/Không cho phép."
+        ctx_block = (
+            "[YÊU CẦU QUYỀN TRUY CẬP THÔNG TIN CÁ NHÂN]:\n"
+            f"{msg_text}\n"
+            "- Tình trạng: Người dùng chưa cấp quyền truy cập thông tin cá nhân trong phiên này.\n"
+            "- Yêu cầu: Hãy giải thích ngắn gọn, lịch sự rằng hệ thống cần được người dùng cho phép truy cập thông tin cá nhân để xem lịch sử giao dịch, và mời người dùng bấm lựa chọn 'Cho phép' hoặc 'Không cho phép' ngay ở khung chat bên dưới."
+        )
+        consent_required = True
+    else:
+        formatted_rows = [f"- {tx.description}" for tx in PLACEHOLDER_TRANSACTIONS]
+        data_text = (
+            "Dữ liệu lịch sử giao dịch gần đây của người dùng (Placeholder Data):\n"
+            + "\n".join(formatted_rows)
+        )
+        res = TransactionHistoryResult(
+            status="success",
+            has_consent=True,
+            transactions=PLACEHOLDER_TRANSACTIONS,
+            data_text=data_text
+        )
+        log_detail = f"Trạng thái: Đã có quyền truy cập. Lấy thành công {len(PLACEHOLDER_TRANSACTIONS)} giao dịch mẫu."
+        ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH CỦA NGƯỜI DÙNG]:\n{data_text}"
+        consent_required = False
 
-    formatted_rows = [f"- {tx.description}" for tx in PLACEHOLDER_TRANSACTIONS]
-    data_text = (
-        "Dữ liệu lịch sử giao dịch gần đây của người dùng (Placeholder Data):\n"
-        + "\n".join(formatted_rows)
+    tool_log = (
+        f"**[GỌI TOOL: get_transaction_history]**\n"
+        f"- Query: {query or 'Mặc định'}\n"
+        f"- User Consent: {user_consent}\n"
+        f"- {log_detail}\n"
     )
 
-    return TransactionHistoryResult(
-        status="success",
-        has_consent=True,
-        transactions=PLACEHOLDER_TRANSACTIONS,
-        data_text=data_text
+    return ToolResultItem(
+        tool="get_transaction_history",
+        context_block=ctx_block,
+        tool_log=tool_log,
+        data=res.model_dump(),
+        consent_required=consent_required
     )

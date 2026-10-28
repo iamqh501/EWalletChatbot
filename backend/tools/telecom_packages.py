@@ -3,7 +3,7 @@ import os
 import json
 from typing import Optional, List
 from backend.core.config import TELECOM_PACKAGES_FILE
-from backend.tools.schemas import TelecomPackage
+from backend.tools.schemas import TelecomPackage, ToolResultItem
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,8 @@ def execute_search_telecom_packages(
     data_gb_per_day_min: Optional[float] = None,
     data_gb_per_day_max: Optional[float] = None,
     packages: Optional[List[TelecomPackage]] = None
-) -> str:
-    """Tìm kiếm và đề xuất các gói cước điện thoại dựa trên tiêu chí và sắp xếp tối ưu."""
+) -> ToolResultItem:
+    """Tìm kiếm, sắp xếp tối ưu các gói cước điện thoại dựa trên tiêu chí và đóng gói ToolResultItem."""
     package_list = packages if packages is not None else load_package_data()
 
     results = []
@@ -79,15 +79,35 @@ def execute_search_telecom_packages(
         results.append((formatted, cycle_val, price_val))
 
     if not results:
-        return json.dumps({"error": "Không tìm thấy gói cước nào thoả mãn."}, ensure_ascii=False)
-
-    target = sum(v) / len(v) if (v := {cycle_days_min, cycle_days_max} - {None}) else None
-    if target:
-        results = sorted(results, key=lambda x: (abs(x[1] - target), x[2]))
+        res_text = json.dumps({"error": "Không tìm thấy gói cước nào thoả mãn."}, ensure_ascii=False)
     else:
-        results = sorted(results, key=lambda x: x[2])
+        target = sum(v) / len(v) if (v := {cycle_days_min, cycle_days_max} - {None}) else None
+        if target:
+            results = sorted(results, key=lambda x: (abs(x[1] - target), x[2]))
+        else:
+            results = sorted(results, key=lambda x: x[2])
 
-    output = []
-    for r in results:
-        output.append(r[0])
-    return json.dumps(output, ensure_ascii=False, indent=2)
+        output = [r[0] for r in results]
+        res_text = json.dumps(output, ensure_ascii=False, indent=2)
+
+    ctx_block = f"Kết quả tra cứu gói cước viễn thông:\n{res_text}"
+
+    args_dict = {
+        "package_name": package_name,
+        "price_min": price_min,
+        "price_max": price_max,
+        "cycle_days_min": cycle_days_min,
+        "cycle_days_max": cycle_days_max,
+        "data_gb_per_day_min": data_gb_per_day_min,
+        "data_gb_per_day_max": data_gb_per_day_max
+    }
+    args_str = ", ".join([f"{k}={repr(v)}" for k, v in args_dict.items() if v is not None])
+    short_res = res_text[:2500] + "..." if len(res_text) > 2500 else res_text
+    tool_log = f"**[GỌI TOOL]**\n\n`search_telecom_packages({args_str})`\n\n```\n{short_res}\n```\n"
+
+    return ToolResultItem(
+        tool="search_telecom_packages",
+        context_block=ctx_block,
+        tool_log=tool_log,
+        data=res_text
+    )

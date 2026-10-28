@@ -87,7 +87,9 @@ class ToolResultItem:
     """Mô hình dữ liệu chuẩn hóa cho mỗi kết quả thực thi của Tool lưu trong retrieved_context."""
     tool: str
     context_block: str
+    tool_log: str = ""
     data: Any = None
+    consent_required: bool = False
 
 
 class TelecomPackage(BaseModel):
@@ -123,7 +125,6 @@ class KnowledgeChunk(BaseModel):
     source: str
     score: float
     content: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SearchResultItem(BaseModel):

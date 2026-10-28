@@ -3,6 +3,7 @@ import json
 import asyncio
 from typing import AsyncGenerator, Dict, Any, Optional, List, Tuple
 from langchain.agents import create_agent
+from langchain.agents.middleware import ToolCallLimitMiddleware
 from langchain_core.messages import AIMessageChunk, ToolMessage
 
 from backend.core.state import app_state, session_manager
@@ -119,7 +120,17 @@ class AgentOrchestrator:
             tools = create_agent_tools(tool_context)
             tool_logs = tool_context.tool_logs
 
-            agent = create_agent(llm, tools)
+            agent = create_agent(
+                llm,
+                tools,
+                middleware=[
+                    ToolCallLimitMiddleware(
+                        tool_name="resolve_intent",
+                        run_limit=1,
+                        exit_behavior="end",
+                    )
+                ],
+            )
 
             metrics = StreamMetricsTracker()
             metrics.start()

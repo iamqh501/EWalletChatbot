@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
+from typing import List, Any, Optional
 from langchain_core.tools import tool
 
 from backend.tools.schemas import (
@@ -27,22 +27,8 @@ class AgentToolContext:
     session_id: str = "default_session"
     history_context_text: str = ""
     transaction_history_consent: bool = False
-    limits: Dict[str, int] = field(default_factory=lambda: {
-        "search_general_knowledge": 1,
-        "search_telecom_packages": 1,
-        "resolve_intent": 1,
-        "guide_app_task": 1,
-        "get_transaction_history": 1
-    })
     tool_logs: List[str] = field(default_factory=list)
     retrieved_context: List[ToolResultItem] = field(default_factory=list)
-
-    def consume_limit(self, tool_name: str) -> bool:
-        """Kiểm tra và trừ lượt gọi tối đa của tool trong lượt hội thoại hiện tại."""
-        if self.limits.get(tool_name, 0) <= 0:
-            return False
-        self.limits[tool_name] -= 1
-        return True
 
     def record(self, result: ToolResultItem) -> Any:
         """Ghi nhận kết quả chuẩn hóa của tool vào context_block, tool_logs và trạng thái consent."""
@@ -59,9 +45,6 @@ def create_search_general_knowledge_tool(context: AgentToolContext):
     @tool(args_schema=SearchGeneralKnowledgeArgs, return_direct=True)
     def search_general_knowledge(query: str) -> Any:
         """Tìm kiếm thông tin hướng dẫn sử dụng, chính sách chung về ví điện tử."""
-        if not context.consume_limit("search_general_knowledge"):
-            return [{"error": "[HỆ THỐNG] Bạn đã hết lượt gọi tool này. Hãy sử dụng thông tin hiện có để trả lời."}]
-
         result = execute_search_general_knowledge(
             query=query,
             dense_model=context.app_state.dense_model,
@@ -87,9 +70,6 @@ def create_search_telecom_packages_tool(context: AgentToolContext):
         data_gb_per_day_max: Optional[float] = None,
     ) -> str:
         """Tìm kiếm và đề xuất các gói cước điện thoại dựa trên các tiêu chí."""
-        if not context.consume_limit("search_telecom_packages"):
-            return "[HỆ THỐNG] Bạn đã hết lượt gọi tool này. Hãy sử dụng thông tin hiện có để trả lời."
-
         result = execute_search_telecom_packages(
             package_name=package_name,
             price_min=price_min,
@@ -110,9 +90,6 @@ def create_resolve_intent_tool(context: AgentToolContext):
     @tool(args_schema=ResolveIntentArgs)
     def resolve_intent(query: str, uncertainty_reason: str) -> str:
         """Sử dụng tool này khi bạn KHÔNG CHẮC CHẮN người dùng muốn gì."""
-        if not context.consume_limit("resolve_intent"):
-            return "[HỆ THỐNG] Bạn đã hết lượt gọi tool resolve_intent."
-
         result = execute_resolve_intent(
             query=query,
             uncertainty_reason=uncertainty_reason,
@@ -129,9 +106,6 @@ def create_guide_app_task_tool(context: AgentToolContext):
     @tool(args_schema=GuideAppTaskArgs, return_direct=True)
     def guide_app_task(task_query: str, current_screen: Optional[str] = None) -> str:
         """Hướng dẫn cách thực hiện một tác vụ trên app (nạp điện thoại, mua data, xem lịch sử...) và cách điều hướng màn hình."""
-        if not context.consume_limit("guide_app_task"):
-            return "[HỆ THỐNG] Bạn đã hết lượt gọi tool guide_app_task."
-
         result = execute_guide_app_task(
             task_query=task_query,
             current_screen=current_screen,
@@ -154,9 +128,6 @@ def create_get_transaction_history_tool(context: AgentToolContext):
         user_consent: Optional[bool] = None
     ) -> Any:
         """Tra cứu lịch sử biến động số dư và giao dịch cá nhân của người dùng (chuyển tiền, nhận tiền, thanh toán). Cần quyền truy cập thông tin cá nhân."""
-        if not context.consume_limit("get_transaction_history"):
-            return {"error": "[HỆ THỐNG] Bạn đã hết lượt gọi tool get_transaction_history."}
-
         result = execute_get_transaction_history(
             session_id=context.session_id,
             user_consent=user_consent,

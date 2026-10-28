@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List
 from backend.core.config import COLLECTION_NAME
 from backend.services.retrieval import search_and_rerank
 from backend.tools.schemas import KnowledgeChunk
@@ -47,17 +47,14 @@ def execute_search_general_knowledge(
     return chunks
 
 
-def format_chunks_summary_for_thinking(chunks: List[Union[KnowledgeChunk, dict]]) -> str:
+def format_chunks_summary_for_thinking(chunks: List[KnowledgeChunk]) -> str:
     """Format tóm tắt output của tool search_general_knowledge cho khối thinking."""
     if not chunks:
         return "Tổng số chunk: 0\n(Không tìm thấy thông tin chung nào.)"
 
     lines = [f"Tổng số chunk: {len(chunks)}"]
     for i, chunk in enumerate(chunks, 1):
-        source = chunk.get("source", "Unknown") if isinstance(chunk, dict) or hasattr(chunk, "get") else getattr(chunk, "source", "Unknown")
-        score = chunk.get("score", 0.0) if isinstance(chunk, dict) or hasattr(chunk, "get") else getattr(chunk, "score", 0.0)
-        content = chunk.get("content", "").strip() if isinstance(chunk, dict) or hasattr(chunk, "get") else getattr(chunk, "content", "").strip()
-        content_lines = [l.strip() for l in content.split("\n") if l.strip()]
+        content_lines = [l.strip() for l in chunk.content.strip().split("\n") if l.strip()]
         first_two_lines = "\n".join(content_lines[:2]) if content_lines else ""
-        lines.append(f"\n[Chunk {i} - Nguồn: {source} | Score: {score:.4f}]\n{first_two_lines}\n...")
+        lines.append(f"\n[Chunk {i} - Nguồn: {chunk.source} | Score: {chunk.score:.4f}]\n{first_two_lines}\n...")
     return "\n".join(lines)

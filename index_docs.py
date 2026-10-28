@@ -5,13 +5,7 @@ import shutil
 import json
 import argparse
 
-# Ép kiểu encoding của sys.stdout sang utf-8 để tránh lỗi khi in tiếng Việt trên CMD Windows (Rule 8)
-if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-import backend.core.env
 
 from qdrant_client import QdrantClient, models
 from langchain_core.documents import Document

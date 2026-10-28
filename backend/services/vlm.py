@@ -1,17 +1,15 @@
 import logging
 from typing import Dict, Any, AsyncGenerator, Optional
-from pydantic import Field
+from pydantic import BaseModel, Field
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from backend.core.state import app_state
-from backend.services.llm import get_vlm_model
 from backend.prompts.vlm import VLM_REWRITE_SYSTEM_PROMPT
-from backend.tools.schemas import SubscriptableBaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class VLMResponse(SubscriptableBaseModel):
+class VLMResponse(BaseModel):
     """Schema chuẩn hóa cho đầu ra phân tích hình ảnh và viết lại câu hỏi của VLM."""
     description: str = Field(
         ...,
@@ -25,19 +23,13 @@ class VLMResponse(SubscriptableBaseModel):
 
 class VLMService:
     def __init__(self):
-        self._model = None
         self._structured_model = None
         self._cached_underlying_model = None
 
-    def get_model(self):
-        if hasattr(app_state, "vlm") and app_state.vlm is not None:
-            return app_state.vlm
-        if self._model is None:
-            self._model = get_vlm_model()
-        return self._model
-
     def get_structured_model(self):
-        current_model = self.get_model()
+        current_model = app_state.vlm
+        if current_model is None:
+            raise RuntimeError("Mô hình VLM chưa được khởi tạo trong app_state.")
         if self._structured_model is None or self._cached_underlying_model is not current_model:
             self._structured_model = current_model.with_structured_output(VLMResponse)
             self._cached_underlying_model = current_model

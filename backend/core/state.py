@@ -187,13 +187,13 @@ async def load_models_background():
         notify_component_loaded(f"Reranker: {RERANKER_MODEL}")
 
         notify_init_step(f"Connecting LLM ({HF_LLM_MODEL})...")
-        if not hasattr(app_state, "llm") or app_state.llm is None:
+        if app_state.llm is None:
             app_state.llm = await asyncio.to_thread(get_llm_model)
 
         notify_component_loaded(f"LLM: {HF_LLM_MODEL}")
 
         notify_init_step(f"Connecting VLM ({HF_VLM_MODEL})...")
-        if not hasattr(app_state, "vlm") or app_state.vlm is None:
+        if app_state.vlm is None:
             app_state.vlm = await asyncio.to_thread(get_vlm_model)
 
         notify_component_loaded(f"VLM: {HF_VLM_MODEL}")

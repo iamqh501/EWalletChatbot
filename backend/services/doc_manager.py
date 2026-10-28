@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import json
 import uuid
@@ -100,7 +99,7 @@ def refresh_domain_caches(rel_path: str = ""):
             except Exception as e:
                 logger.warning("[DocManager] Lỗi đồng bộ Excel sang JSON cho gói cước: %s", e)
         from backend.tools.telecom_packages import load_package_data
-        load_package_data(force_reload=True)
+        app_state.telecom_packages = load_package_data()
 
     if not lower or "navigation_map" in lower:
         from backend.tools.app_navigation import load_navigation_map
@@ -456,17 +455,16 @@ def index_single_excel_file(
     return doc_ids, point_ids
 
 
-def delete_file_from_index(key_or_name: str, file_info: dict, client: QdrantClient, store):
+def delete_file_from_index(rel_path: str, file_info: dict, client: QdrantClient, store):
     """Xóa dữ liệu một file khỏi database và store."""
     doc_ids = file_info.get("doc_ids", [])
     point_ids = file_info.get("point_ids", [])
-    basename = os.path.basename(key_or_name)
 
     if doc_ids and store:
         try:
             store.mdelete(doc_ids)
         except Exception as e:
-            logger.warning("[DocManager] Lỗi xóa parent docs %s: %s", key_or_name, e)
+            logger.warning("[DocManager] Lỗi xóa parent docs %s: %s", rel_path, e)
 
     if point_ids and client:
         try:
@@ -475,27 +473,18 @@ def delete_file_from_index(key_or_name: str, file_info: dict, client: QdrantClie
                 points_selector=models.PointIdsList(points=point_ids)
             )
         except Exception as e:
-            logger.warning("[DocManager] Lỗi xóa points theo ID %s: %s", key_or_name, e)
+            logger.warning("[DocManager] Lỗi xóa points theo ID %s: %s", rel_path, e)
 
-    # Xóa theo MatchAny để bao quát cả relative path lẫn basename
     if client:
         try:
             client.delete(
                 collection_name=COLLECTION_NAME,
                 points_selector=models.FilterSelector(
                     filter=models.Filter(
-                        should=[
+                        must=[
                             models.FieldCondition(
                                 key="metadata.file_path",
-                                match=models.MatchValue(value=key_or_name)
-                            ),
-                            models.FieldCondition(
-                                key="metadata.file_path",
-                                match=models.MatchValue(value=basename)
-                            ),
-                            models.FieldCondition(
-                                key="metadata.filename",
-                                match=models.MatchValue(value=basename)
+                                match=models.MatchValue(value=rel_path)
                             )
                         ]
                     )
@@ -583,8 +572,8 @@ class DocumentManager:
 
             is_idxable = is_indexable_doc(rel_path)
 
-            # Kiểm tra trạng thái index (khớp theo relative_path hoặc basename)
-            state_info = state.get(rel_path) or state.get(fname)
+            # Kiểm tra trạng thái index theo relative_path
+            state_info = state.get(rel_path)
             is_indexed = bool(state_info and is_idxable)
             chunk_count = len(state_info.get("doc_ids", [])) if state_info else 0
 
@@ -742,12 +731,10 @@ class DocumentManager:
             client = app_state.qdrant_client
             store = app_state.store
 
-            # Tìm và xóa key trong state (có thể lưu là rel_path hoặc fname)
-            matching_keys = [k for k in [rel_path, fname] if k in state]
-            for k in matching_keys:
+            if rel_path in state:
                 if client and store:
-                    await asyncio.to_thread(delete_file_from_index, k, state[k], client, store)
-                del state[k]
+                    await asyncio.to_thread(delete_file_from_index, rel_path, state[rel_path], client, store)
+                del state[rel_path]
 
             await asyncio.to_thread(save_state, state)
 
@@ -771,7 +758,7 @@ class DocumentManager:
             return {"status": "skipped", "reason": f"File {rel_path} không thuộc diện vector index (dữ liệu gói cước hoặc json)."}
 
         # Đợi các model nạp xong nếu đang nạp
-        if hasattr(app_state, "load_task") and app_state.load_task and not app_state.load_task.done():
+        if app_state.load_task and not app_state.load_task.done():
             await app_state.load_task
 
         client = app_state.qdrant_client
@@ -785,10 +772,9 @@ class DocumentManager:
         async with indexing_lock:
             state = await asyncio.to_thread(load_state)
             # Xóa points cũ nếu có
-            for old_key in [rel_path, fname]:
-                if old_key in state:
-                    await asyncio.to_thread(delete_file_from_index, old_key, state[old_key], client, store)
-                    del state[old_key]
+            if rel_path in state:
+                await asyncio.to_thread(delete_file_from_index, rel_path, state[rel_path], client, store)
+                del state[rel_path]
 
             lower = fname.lower()
             if lower.endswith((".xlsx", ".xls")):
@@ -824,7 +810,7 @@ class DocumentManager:
 
     async def sync_all_documents(self) -> Dict[str, Any]:
         """Đồng bộ toàn bộ các thay đổi trong docs/ (thêm mới, chỉnh sửa, xóa) qua các subfolder."""
-        if hasattr(app_state, "load_task") and app_state.load_task and not app_state.load_task.done():
+        if app_state.load_task and not app_state.load_task.done():
             await app_state.load_task
 
         client = app_state.qdrant_client
@@ -849,14 +835,6 @@ class DocumentManager:
                 return st, curr
 
             state, current_files = await asyncio.to_thread(_scan_and_hash)
-
-            saved_keys = set(state.keys())
-
-            # Xử lý các key cũ chỉ có basename -> xóa khỏi state & vector
-            legacy_keys = [k for k in saved_keys if "/" not in k and "\\" not in k]
-            for old_k in legacy_keys:
-                await asyncio.to_thread(delete_file_from_index, old_k, state[old_k], client, store)
-                del state[old_k]
 
             saved_keys = set(state.keys())
 

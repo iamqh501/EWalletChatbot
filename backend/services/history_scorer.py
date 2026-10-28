@@ -1,6 +1,5 @@
 import logging
-import os
-from typing import List, Dict, Any, Tuple, Union
+from typing import List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor
 from typesafe_sdk import TypeSafeClient, Noul, NoulCriteria
 from backend.core.config import RERANKER_MODEL
@@ -10,11 +9,10 @@ logger = logging.getLogger(__name__)
 
 
 class HistoryScorer:
-    def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
-        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
-        self.model = model or RERANKER_MODEL
+    def __init__(self, max_workers: int = 10):
+        self.model = RERANKER_MODEL
         self.max_workers = max_workers
-        self.client = TypeSafeClient(api_key=self.api_key, timeout=20.0) if self.api_key else None
+        self.client = TypeSafeClient(timeout=20.0)
 
         self.relevance_question = Noul(
             instructions=(
@@ -29,18 +27,14 @@ class HistoryScorer:
             )
         )
 
-    def format_turn_content(self, turn: Dict[str, Any]) -> str:
-        parts = [f"User: {turn.get('user_query', '').strip()}"]
-        ai_out = turn.get('agent_output', '').strip()
+    def format_turn_content(self, turn: ConversationTurn) -> str:
+        parts = [f"User: {turn.user_query.strip()}"]
+        ai_out = turn.agent_output.strip()
         if ai_out:
             parts.append(f"AI: {ai_out}")
         return "\n".join(parts)
 
-    def score_single(self, current_query: str, turn: Dict[str, Any], diff: int) -> float:
-        if not self.client:
-            logger.warning("[HistoryScorer] Chưa cấu hình TYPESAFE_API_KEY.")
-            return 0.0
-
+    def score_single(self, current_query: str, turn: ConversationTurn, diff: int) -> float:
         content = self.format_turn_content(turn)
         state = {
             "current_query": current_query,
@@ -57,13 +51,13 @@ class HistoryScorer:
             score = float(resp.nouls["relevance"].noul)
             return round(score, 4)
         except Exception as e:
-            logger.error("[HistoryScorer Error] Message %s: %s", turn.get("id"), e)
+            logger.error("[HistoryScorer Error] Message %s: %s", turn.id, e)
             return 0.0
 
     def evaluate_recent_history(
         self,
         current_query: str,
-        recent_turns: List[Union[ConversationTurn, Dict[str, Any]]],
+        recent_turns: List[ConversationTurn],
         r_matrix: Dict[Tuple[int, int], float],
         a: float = 0.5,
         threshold: float = 0.7
@@ -102,12 +96,12 @@ class HistoryScorer:
         # với d_bridge_ij = 2 * d_i * r_ij / (d_i + r_ij)
         scored_messages = []
         for turn, diff, d_i in score_results:
-            turn_id = turn["id"]
+            turn_id = turn.id
             r_ij_list = []
             bridge_list = []
 
             for other_turn, other_diff, _ in score_results:
-                other_id = other_turn["id"]
+                other_id = other_turn.id
                 if other_id == turn_id:
                     continue
                 r_val = r_matrix.get((turn_id, other_id), r_matrix.get((other_id, turn_id), 0.0))
@@ -141,7 +135,7 @@ class HistoryScorer:
 
         # 3. Lọc các message đạt ngưỡng score >= 0.7 làm context cho LLM
         valid_messages = [item for item in scored_messages if item["passed"]]
-        valid_messages_sorted = sorted(valid_messages, key=lambda x: x["turn"]["id"])
+        valid_messages_sorted = sorted(valid_messages, key=lambda x: x["turn_id"])
 
         context_blocks = []
         for item in valid_messages_sorted:
@@ -150,8 +144,8 @@ class HistoryScorer:
             u_score = item["u_i"]
 
             block_lines = [f"- Tin nhắn ({diff} message trước | Độ tương đồng: {u_score:.4f}):"]
-            block_lines.append(f"  User: {turn.get('user_query', '')}")
-            block_lines.append(f"  AI: {turn.get('agent_output', '')}")
+            block_lines.append(f"  User: {turn.user_query}")
+            block_lines.append(f"  AI: {turn.agent_output}")
             context_blocks.append("\n".join(block_lines))
 
         context_text = "\n\n".join(context_blocks)

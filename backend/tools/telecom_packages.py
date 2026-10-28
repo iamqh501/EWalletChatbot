@@ -1,22 +1,16 @@
 import logging
 import os
 import json
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List
 from backend.core.config import TELECOM_PACKAGES_FILE
 from backend.tools.schemas import TelecomPackage
 
 logger = logging.getLogger(__name__)
 
-_cached_packages: Optional[List[TelecomPackage]] = None
 
-
-def load_package_data(force_reload: bool = False) -> List[TelecomPackage]:
-    """Tải và parse dữ liệu các gói cước từ file cấu hình TELECOM_PACKAGES_FILE với in-memory cache."""
-    global _cached_packages
-    if _cached_packages is not None and not force_reload:
-        return _cached_packages
-
-    package_data = []
+def load_package_data() -> List[TelecomPackage]:
+    """Tải và parse dữ liệu các gói cước từ file cấu hình TELECOM_PACKAGES_FILE."""
+    package_data: List[TelecomPackage] = []
     try:
         if os.path.exists(TELECOM_PACKAGES_FILE):
             with open(TELECOM_PACKAGES_FILE, "r", encoding="utf-8") as f:
@@ -38,16 +32,7 @@ def load_package_data(force_reload: bool = False) -> List[TelecomPackage]:
     except Exception as e:
         logger.error("Error reading package file: %s", e)
 
-    _cached_packages = package_data
-
-    # Đồng bộ với app_state nếu đang chạy trong tiến trình FastAPI
-    try:
-        from backend.core.state import app_state
-        app_state.telecom_packages = package_data
-    except Exception:
-        pass
-
-    return _cached_packages
+    return package_data
 
 
 def execute_search_telecom_packages(
@@ -58,24 +43,17 @@ def execute_search_telecom_packages(
     cycle_days_max: Optional[int] = None,
     data_gb_per_day_min: Optional[float] = None,
     data_gb_per_day_max: Optional[float] = None,
-    data: Optional[List[Union[TelecomPackage, Dict[str, Any]]]] = None
+    packages: Optional[List[TelecomPackage]] = None
 ) -> str:
     """Tìm kiếm và đề xuất các gói cước điện thoại dựa trên tiêu chí và sắp xếp tối ưu."""
-    if data is not None:
-        package_list = data
-    else:
-        try:
-            from backend.core.state import app_state
-            package_list = getattr(app_state, "telecom_packages", None) or load_package_data()
-        except Exception:
-            package_list = load_package_data()
+    package_list = packages if packages is not None else load_package_data()
 
     results = []
     for item in package_list:
-        pkg_name = item.package_name if isinstance(item, TelecomPackage) else item["package_name"]
-        price_val = item.price_vnd if isinstance(item, TelecomPackage) else item["price_vnd"]
-        cycle_val = item.cycle_days if isinstance(item, TelecomPackage) else item["cycle_days"]
-        data_val = item.data_gb_per_day if isinstance(item, TelecomPackage) else item["data_gb_per_day"]
+        pkg_name = item.package_name
+        price_val = item.price_vnd
+        cycle_val = item.cycle_days
+        data_val = item.data_gb_per_day
 
         if package_name and package_name.upper() not in pkg_name.upper():
             continue

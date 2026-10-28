@@ -60,7 +60,7 @@ class AgentOrchestrator:
     async def stream_query(self, query: str, session_id: str = "default_session", image: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
         try:
             # 1. Đảm bảo mô hình AI đã nạp hoàn tất
-            if hasattr(app_state, "load_task") and app_state.load_task and not app_state.load_task.done():
+            if app_state.load_task and not app_state.load_task.done():
                 yield {"event": "status", "data": json.dumps({"step": "loading", "status": "info", "text": "Loading models..."})}
                 await app_state.load_task
 
@@ -100,10 +100,10 @@ class AgentOrchestrator:
             )
 
             # In kết quả đánh giá tương đồng ra frontend khối thinking
-            debug_text = eval_result["debug_text"]
+            debug_text = eval_result.debug_text
             yield {"event": "thinking", "data": json.dumps({"text": f"{debug_text}\n"})}
 
-            history_context_text = eval_result.get("context_text", "")
+            history_context_text = eval_result.context_text
             if history_context_text:
                 user_prompt_content = f"[NGỮ CẢNH TỪ LỊCH SỬ TRÒ CHUYỆN LIÊN QUAN (Độ tương đồng >= 0.7)]:\n{history_context_text}\n\nCâu hỏi hiện tại của người dùng: {query}"
             else:
@@ -213,7 +213,7 @@ class AgentOrchestrator:
                 session_id=session_id,
                 user_query=query,
                 agent_output=full_answer,
-                scored_messages=eval_result.get("scored_messages", [])
+                scored_messages=eval_result.scored_messages
             )
 
         except Exception as e:

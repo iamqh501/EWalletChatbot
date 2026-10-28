@@ -24,6 +24,7 @@ def load_navigation_map() -> Dict[str, Any]:
 def execute_guide_app_task(
     task_query: str,
     current_screen: Optional[str] = None,
+    nav_map: Optional[Dict[str, Any]] = None,
     dense_model=None,
     sparse_model=None,
     client=None,
@@ -33,11 +34,8 @@ def execute_guide_app_task(
     Truy vấn chunk hướng dẫn tác vụ từ cơ sở dữ liệu tri thức và cung cấp kèm
     sơ đồ điều hướng navigation_map.json làm grounding data cho mô hình suy luận.
     """
-    # 1. Nạp navigation_map.json (ưu tiên dùng nav_map đã cache trong app_state)
-    try:
-        from backend.core.state import app_state as _app_state
-        nav_map = getattr(_app_state, "nav_map", None) or load_navigation_map()
-    except Exception:
+    # 1. Nạp navigation_map.json (dùng nav_map từ app_state nếu đã truyền vào)
+    if nav_map is None:
         nav_map = load_navigation_map()
 
     # 2. Truy vấn chunk hướng dẫn tác vụ từ database với filter theo file navigation

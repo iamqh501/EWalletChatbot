@@ -8,26 +8,18 @@ from backend.core.config import COLLECTION_NAME, EMBEDDING_MODEL, RERANKER_MODEL
 from backend.tools.schemas import SearchResultItem
 
 
-def get_dense_embedding_model(token: str | None = None, model: str | None = None) -> HuggingFaceEndpointEmbeddings:
-    hf_token = token or os.getenv("HF_API_KEY") or os.getenv("HF_TOKEN")
-    model_name = model or EMBEDDING_MODEL
-    if not hf_token:
-        raise ValueError("Chưa cấu hình HF_API_KEY hoặc HF_TOKEN trong biến môi trường hoặc file .env.")
-    dense_model = HuggingFaceEndpointEmbeddings(
-        model=model_name,
-        huggingfacehub_api_token=hf_token
-    )
+def get_dense_embedding_model() -> HuggingFaceEndpointEmbeddings:
+    dense_model = HuggingFaceEndpointEmbeddings(model=EMBEDDING_MODEL)
     # Warmup để kiểm tra kết nối API
     dense_model.embed_query("warmup")
     return dense_model
 
 
 class JevReranker:
-    def __init__(self, api_key: str | None = None, model: str | None = None, max_workers: int = 10):
-        self.api_key = api_key or os.getenv("TYPESAFE_API_KEY")
-        self.model = model or RERANKER_MODEL
+    def __init__(self, max_workers: int = 10):
+        self.model = RERANKER_MODEL
         self.max_workers = max_workers
-        self.client = TypeSafeClient(api_key=self.api_key, timeout=30.0) if self.api_key else None
+        self.client = TypeSafeClient(timeout=30.0)
         self.question = Noul(
             instructions=(
                 "Đoạn trích thông tin này có trả lời hoặc cung cấp thông tin liên quan trực tiếp cho câu hỏi của người dùng không?"
@@ -41,11 +33,6 @@ class JevReranker:
     def predict(self, pairs: list[list[str]]) -> list[float]:
         if not pairs:
             return []
-
-        if not self.client:
-            raise ValueError(
-                "Chưa cấu hình TYPESAFE_API_KEY. Vui lòng thiết lập biến môi trường TYPESAFE_API_KEY hoặc thêm vào file .env."
-            )
 
         def score_pair(pair):
             query, passage = pair
@@ -151,8 +138,6 @@ def search_and_rerank(
             parent_id=pid,
             score=float(score),
             source=os.path.basename(pdoc.metadata.get('file_path', 'Unknown')),
-            page=pdoc.metadata.get('page_number', 'Unknown'),
-            is_toc=pdoc.metadata.get('is_toc', False),
             content=pdoc.page_content,
             metadata=pdoc.metadata or {}
         ))

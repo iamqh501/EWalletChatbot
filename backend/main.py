@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,9 +6,6 @@ from backend.core.config import HOST, BACKEND_PORT, FRONTEND_PORT, ADMIN_PORT
 from backend.core.state import lifespan
 from backend.api import api_router
 
-# Ensure UTF-8 output on Windows CMD (Rule 8)
-if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 logging.basicConfig(

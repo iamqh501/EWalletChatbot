@@ -52,16 +52,16 @@ def create_search_general_knowledge_tool(context: AgentToolContext):
 
         res = execute_search_general_knowledge(
             query=query,
-            dense_model=getattr(context.app_state, "dense_model", None),
-            sparse_model=getattr(context.app_state, "sparse_model", None),
-            client=getattr(context.app_state, "qdrant_client", None),
-            store=getattr(context.app_state, "store", None)
+            dense_model=context.app_state.dense_model,
+            sparse_model=context.app_state.sparse_model,
+            client=context.app_state.qdrant_client,
+            store=context.app_state.store
         )
 
         if not res:
             ctx_block = "Kết quả tra cứu kiến thức chung: Không tìm thấy tài liệu phù hợp."
         else:
-            doc_texts = [f"[Tài liệu {i} - Nguồn: {ch.get('source', '')}]\n{ch.get('content', '')}" for i, ch in enumerate(res, 1)]
+            doc_texts = [f"[Tài liệu {i} - Nguồn: {ch.source}]\n{ch.content}" for i, ch in enumerate(res, 1)]
             ctx_block = "Kết quả tra cứu kiến thức chung:\n" + "\n\n".join(doc_texts)
 
         context.retrieved_context.append(ToolResultItem(
@@ -104,7 +104,10 @@ def create_search_telecom_packages_tool(context: AgentToolContext):
             "data_gb_per_day_min": data_gb_per_day_min,
             "data_gb_per_day_max": data_gb_per_day_max
         }
-        res = execute_search_telecom_packages(**args_dict)
+        res = execute_search_telecom_packages(
+            packages=context.app_state.telecom_packages,
+            **args_dict
+        )
         ctx_block = f"Kết quả tra cứu gói cước viễn thông:\n{res}"
         context.retrieved_context.append(ToolResultItem(
             tool="search_telecom_packages",
@@ -163,10 +166,11 @@ def create_guide_app_task_tool(context: AgentToolContext):
         res = execute_guide_app_task(
             task_query=task_query,
             current_screen=current_screen,
-            dense_model=getattr(context.app_state, "dense_model", None),
-            sparse_model=getattr(context.app_state, "sparse_model", None),
-            client=getattr(context.app_state, "qdrant_client", None),
-            store=getattr(context.app_state, "store", None)
+            nav_map=context.app_state.nav_map,
+            dense_model=context.app_state.dense_model,
+            sparse_model=context.app_state.sparse_model,
+            client=context.app_state.qdrant_client,
+            store=context.app_state.store
         )
         ctx_block = f"[KẾT QUẢ ĐIỀU HƯỚNG VÀ HƯỚNG DẪN TÁC VỤ APP]:\n{res}"
         context.retrieved_context.append(ToolResultItem(
@@ -202,22 +206,18 @@ def create_get_transaction_history_tool(context: AgentToolContext):
             query=query
         )
 
-        status = getattr(res, "status", None) or (res.get("status") if isinstance(res, dict) else "")
-        if status == "consent_required":
+        if res.status == "consent_required":
             context.transaction_history_consent = True
-            msg_text = getattr(res, "message", None) or (res.get("message", "") if isinstance(res, dict) else "")
             log_detail = "Trạng thái: Chưa có quyền (Consent required). Cần người dùng xác nhận Cho phép/Không cho phép."
             ctx_block = (
                 "[YÊU CẦU QUYỀN TRUY CẬP THÔNG TIN CÁ NHÂN]:\n"
-                f"{msg_text}\n"
+                f"{res.message or ''}\n"
                 "- Tình trạng: Người dùng chưa cấp quyền truy cập thông tin cá nhân trong phiên này.\n"
                 "- Yêu cầu: Hãy giải thích ngắn gọn, lịch sự rằng hệ thống cần được người dùng cho phép truy cập thông tin cá nhân để xem lịch sử giao dịch, và mời người dùng bấm lựa chọn 'Cho phép' hoặc 'Không cho phép' ngay ở khung chat bên dưới."
             )
-        elif status == "success":
-            tx_list = getattr(res, "transactions", None) or (res.get("transactions", []) if isinstance(res, dict) else [])
-            data_text = getattr(res, "data_text", None) or (res.get("data_text", "") if isinstance(res, dict) else "")
-            log_detail = f"Trạng thái: Đã có quyền truy cập. Lấy thành công {len(tx_list)} giao dịch mẫu."
-            ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH CỦA NGƯỜI DÙNG]:\n{data_text}"
+        elif res.status == "success":
+            log_detail = f"Trạng thái: Đã có quyền truy cập. Lấy thành công {len(res.transactions)} giao dịch mẫu."
+            ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH CỦA NGƯỜI DÙNG]:\n{res.data_text or ''}"
         else:
             log_detail = "Trạng thái: Đã tra cứu dữ liệu."
             ctx_block = f"[KẾT QUẢ TRA CỨU LỊCH SỬ GIAO DỊCH]:\n{res}"
@@ -231,7 +231,7 @@ def create_get_transaction_history_tool(context: AgentToolContext):
         context.tool_logs.append(
             f"**[GỌI TOOL: get_transaction_history]**\n- Query: {query or 'Mặc định'}\n- User Consent: {user_consent}\n- {log_detail}\n"
         )
-        return res if isinstance(res, dict) else res.model_dump()
+        return res.model_dump()
 
     return get_transaction_history
 

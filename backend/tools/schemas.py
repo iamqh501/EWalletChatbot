@@ -4,20 +4,6 @@ from pydantic import BaseModel, Field
 
 
 # ==========================================
-# BASE MODEL WITH SUBSCRIPT SUPPORT
-# ==========================================
-
-class SubscriptableBaseModel(BaseModel):
-    """Lớp cơ sở hỗ trợ truy xuất dạng subscript [key] và .get(key) tương thích ngược."""
-
-    def __getitem__(self, item: str) -> Any:
-        return getattr(self, item)
-
-    def get(self, item: str, default: Any = None) -> Any:
-        return getattr(self, item, default)
-
-
-# ==========================================
 # TOOL ARGUMENT SCHEMAS
 # ==========================================
 
@@ -104,7 +90,7 @@ class ToolResultItem:
     data: Any = None
 
 
-class TelecomPackage(SubscriptableBaseModel):
+class TelecomPackage(BaseModel):
     """Mô hình dữ liệu gói cước viễn thông chuẩn hóa."""
     package_name: str
     price_vnd: float = 0.0
@@ -112,7 +98,7 @@ class TelecomPackage(SubscriptableBaseModel):
     data_gb_per_day: float = 0.0
 
 
-class TransactionRecord(SubscriptableBaseModel):
+class TransactionRecord(BaseModel):
     """Mô hình bản ghi lịch sử giao dịch cá nhân."""
     date: str
     action: str
@@ -123,7 +109,7 @@ class TransactionRecord(SubscriptableBaseModel):
     description: str
 
 
-class TransactionHistoryResult(SubscriptableBaseModel):
+class TransactionHistoryResult(BaseModel):
     """Mô hình kết quả trả về của tool tra cứu lịch sử giao dịch."""
     status: str
     has_consent: bool
@@ -132,7 +118,7 @@ class TransactionHistoryResult(SubscriptableBaseModel):
     data_text: Optional[str] = None
 
 
-class KnowledgeChunk(SubscriptableBaseModel):
+class KnowledgeChunk(BaseModel):
     """Mô hình chunk tài liệu tri thức trả về từ tìm kiếm kiến thức chung."""
     source: str
     score: float
@@ -140,25 +126,23 @@ class KnowledgeChunk(SubscriptableBaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class SearchResultItem(SubscriptableBaseModel):
+class SearchResultItem(BaseModel):
     """Mô hình kết quả Hybrid Search và Rerank từ Qdrant & Parent Document Store."""
     parent_id: str
     score: float
     source: str
-    page: Optional[Any] = "Unknown"
-    is_toc: bool = False
     content: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class ConversationTurn(SubscriptableBaseModel):
+class ConversationTurn(BaseModel):
     """Mô hình một lượt hội thoại lưu trữ trong SessionManager."""
     id: int
     user_query: str
     agent_output: str
 
 
-class HistoryEvalResult(SubscriptableBaseModel):
+class HistoryEvalResult(BaseModel):
     """Mô hình kết quả đánh giá liên quan lịch sử hội thoại từ HistoryScorer."""
     scored_messages: List[Dict[str, Any]] = Field(default_factory=list)
     valid_context: List[Dict[str, Any]] = Field(default_factory=list)
